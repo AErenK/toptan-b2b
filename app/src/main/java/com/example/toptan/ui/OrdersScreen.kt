@@ -1,65 +1,95 @@
 package com.example.toptan.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.toptan.viewmodel.OrdersViewModel
+import com.example.toptan.viewmodel.Siparis
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrdersScreen() {
+fun OrdersScreen(viewModel: OrdersViewModel = viewModel()) {
+    val siparisler by viewModel.siparisler.collectAsState()
+    val yukleniyor by viewModel.yukleniyor.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Siparişlerim", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+                title = { Text("Geçmiş Siparişlerim", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
-        containerColor = Color(0xFFF5F5F5) // Arka planı hafif gri yapıyoruz ki kartlar öne çıksın
+        containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // Gerçek veritabanı bağlanana kadar 4 tane örnek sipariş kartı çizdiriyoruz
-            items(4) { index ->
-                B2BOrderCard(
-                    orderNumber = "SIP-2026${1000 + index}",
-                    wholesalerName = if (index % 2 == 0) "Marmara Toptan Gıda" else "Ege Tekstil Üretim",
-                    totalAmount = "${(index + 1) * 12500} ₺",
-                    status = if (index == 0) "Yola Çıktı" else "Hazırlanıyor"
-                )
+            // 1. Durum: Veriler yükleniyor
+            if (yukleniyor) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
+            // 2. Durum: Liste boş (Henüz sipariş yok)
+            else if (siparisler.isEmpty()) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.ReceiptLong,
+                        contentDescription = "Boş",
+                        modifier = Modifier.size(72.dp),
+                        tint = Color.LightGray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Henüz bir siparişiniz bulunmuyor.", color = Color.Gray, fontSize = 16.sp)
+                }
+            }
+            // 3. Durum: Siparişler listeleniyor
+            else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+                    items(siparisler.size) { index ->
+                        OrderItemCard(siparis = siparisler[index])
+                    }
+
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun B2BOrderCard(
-    orderNumber: String,
-    wholesalerName: String,
-    totalAmount: String,
-    status: String
-) {
+fun OrderItemCard(siparis: Siparis) {
+    val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(siparis.toplamTutar)
+
+    // Siparişin durumuna göre etiket rengini belirliyoruz
+    val durumRengi = when(siparis.durum) {
+        "Hazırlanıyor" -> Color(0xFFF57C00) // Turuncu
+        "Yola Çıktı" -> Color(0xFF1976D2)   // Mavi
+        "Teslim Edildi" -> Color(0xFF388E3C) // Yeşil
+        else -> Color.Gray
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -67,57 +97,61 @@ fun B2BOrderCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Üst Satır: Sipariş No ve Durum
+            // Üst Kısım: Tarih ve Durum Etiketi
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = orderNumber, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = siparis.formatliTarih, fontSize = 14.sp, color = Color.Gray)
 
-                // Durum rozeti (Badge)
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = if (status == "Yola Çıktı") Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = durumRengi.copy(alpha = 0.1f)
                 ) {
                     Text(
-                        text = status,
-                        color = if (status == "Yola Çıktı") Color(0xFF2E7D32) else Color(0xFFEF6C00),
+                        text = siparis.durum,
+                        color = durumRengi,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFEEEEEE))
+
+            // Orta Kısım: Sipariş Özeti
+            Text(text = "Ürünler:", fontSize = 12.sp, color = Color.Gray)
+            Text(text = siparis.siparisOzeti, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Alt Satır: Toptancı Adı, İkon ve Fiyat
+            // Alt Kısım: Kargo ve Tutar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(text = "Toptancı", fontSize = 12.sp, color = Color.Gray)
-                    Text(text = wholesalerName, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.LocalShipping,
+                        Icons.Default.LocalShipping,
                         contentDescription = "Kargo",
                         tint = Color.Gray,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = totalAmount, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF1565C0))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "Standart Teslimat", fontSize = 12.sp, color = Color.Gray)
                 }
+
+                Text(
+                    text = "$formatliTutar ₺",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF1565C0)
+                )
             }
         }
     }

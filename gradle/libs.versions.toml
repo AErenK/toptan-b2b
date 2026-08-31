@@ -11,6 +11,7 @@ composeBom = "2026.02.01"
 googleGmsGoogleServices = "4.5.0"
 firebaseFirestore = "26.6.0"
 
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

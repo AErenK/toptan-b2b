@@ -17,10 +17,12 @@ import androidx.compose.ui.unit.sp
 import com.example.toptan.model.Urun
 import java.text.NumberFormat
 import java.util.Locale
+import com.example.toptan.viewmodel.CartViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(onBackClick: () -> Unit) {
+fun CatalogScreen(cartViewModel: CartViewModel, // Burayı ekledik
+                  onBackClick: () -> Unit) {
     // Şimdilik sahte (dummy) ürün listesi oluşturuyoruz
     val urunler = listOf(
         Urun(id = "U1", toptanciId = "1", ad = "Torku Küp Şeker 1KG (Koli)", fiyat = 250.0, minAlimMiktari = 50, stokMiktari = 500),
@@ -58,7 +60,10 @@ fun CatalogScreen(onBackClick: () -> Unit) {
             }
 
             items(urunler.size) { index ->
-                CatalogItemCard(urun = urunler[index])
+                CatalogItemCard(
+                    urun = urunler[index],
+                    onAddToCartClick = { cartViewModel.sepeteEkle(urunler[index]) } // Fonksiyonu bağladık
+                )
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
@@ -66,7 +71,8 @@ fun CatalogScreen(onBackClick: () -> Unit) {
 }
 
 @Composable
-fun CatalogItemCard(urun: Urun) {
+fun CatalogItemCard(urun: Urun,
+                    onAddToCartClick: () -> Unit) {
     val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(urun.fiyat)
 
     Card(
@@ -90,7 +96,7 @@ fun CatalogItemCard(urun: Urun) {
                 }
 
                 Button(
-                    onClick = { /* Sepete ekleme işlemi MVVM ile bağlanacak */ },
+                    onClick = onAddToCartClick, // Burayı değiştirdik
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -102,4 +108,5 @@ fun CatalogItemCard(urun: Urun) {
             }
         }
     }
+
 }
