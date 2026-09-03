@@ -18,7 +18,8 @@ data class Urun(
     val fiyat: Double = 0.0,
     val minAlimMiktari: Int = 0,
     val stokMiktari: Int = 0,
-    val eklenmeTarihi: Long = 0L // Firestore'a kaydederken eklediğimiz tarih
+    val gorselUrl: String = "",
+    val eklenmeTarihi: Long = 0L
 )
 
 // Sepette tutulacak ürünlerin modeli

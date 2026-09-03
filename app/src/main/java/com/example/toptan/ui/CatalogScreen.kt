@@ -23,6 +23,11 @@ import com.example.toptan.viewmodel.CartViewModel
 import com.example.toptan.viewmodel.CatalogViewModel
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.filled.Image
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,29 +107,56 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(text = "$formatliFiyat ₺ / Adet", color = Color(0xFF1565C0), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-                    Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 12.sp, color = Color.Gray)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // --- 1. GÖRSEL ALANI (SOL TARAF) ---
+            if (urun.gorselUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = urun.gorselUrl,
+                    contentDescription = urun.ad,
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(RoundedCornerShape(8.dp)), // Köşeleri hafif yuvarlatılmış kare
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Eğer ürünün fotoğrafı yoksa şık bir gri yer tutucu (placeholder) gösteriyoruz
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF0F0F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Image, contentDescription = "Görsel Yok", tint = Color.Gray, modifier = Modifier.size(32.dp))
                 }
+            }
 
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // --- 2. ÜRÜN BİLGİLERİ VE BUTON (SAĞ TARAF) ---
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(text = "$formatliFiyat ₺ / Adet", color = Color(0xFF1565C0), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 12.sp, color = Color.Gray)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Butonu sağa yaslıyoruz
                 Button(
                     onClick = onAddToCartClick,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    modifier = Modifier.align(Alignment.End),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Icon(Icons.Default.ShoppingCart, contentDescription = "Ekle", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Ekle")
+                    Text("Sepete Ekle")
                 }
             }
         }

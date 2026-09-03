@@ -1,5 +1,10 @@
 package com.example.toptan.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,17 +13,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.toptan.viewmodel.AuthViewModel
 import com.example.toptan.viewmodel.ToptanciViewModel
 import kotlinx.coroutines.delay
@@ -29,14 +38,24 @@ fun ToptanciHomeScreen(
     viewModel: ToptanciViewModel = viewModel(),
     authViewModel: AuthViewModel = viewModel(),
     onLogoutClick: () -> Unit,
-    onNavigateToSiparisler: () -> Unit // YENİ: Siparişler ekranına gitme tetikleyicisi
+    onNavigateToSiparisler: () -> Unit
 ) {
     var urunAdi by remember { mutableStateOf("") }
     var fiyat by remember { mutableStateOf("") }
     var minAlim by remember { mutableStateOf("") }
     var stok by remember { mutableStateOf("") }
 
+    // YENİ: Seçilen görselin URI (yol) bilgisini tutacağımız state
+    var gorselUri by remember { mutableStateOf<Uri?>(null) }
+
     val mesaj by viewModel.mesaj.collectAsState()
+
+    // YENİ: Galeriyi açacak launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        gorselUri = uri
+    }
 
     LaunchedEffect(mesaj) {
         if (mesaj?.contains("başarıyla") == true) {
@@ -45,6 +64,7 @@ fun ToptanciHomeScreen(
             fiyat = ""
             minAlim = ""
             stok = ""
+            gorselUri = null // Kayıttan sonra görseli de temizle
             viewModel.mesajiTemizle()
         } else if (mesaj != null) {
             delay(3000)
@@ -77,11 +97,10 @@ fun ToptanciHomeScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // YENİ EKLENEN BUTON: Gelen Siparişlere Git
             Button(
                 onClick = onNavigateToSiparisler,
                 modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF57C00)), // Turuncu renk
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF57C00)),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.List, contentDescription = "Siparişler", tint = Color.White)
@@ -99,11 +118,35 @@ fun ToptanciHomeScreen(
                 fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.align(Alignment.Start)
             )
-            Text(
-                text = "Müşterilerin kataloğunda görünecek ürünü tanımlayın.",
-                color = Color.Gray,
-                modifier = Modifier.align(Alignment.Start)
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- YENİ: GÖRSEL SEÇME ALANI ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFE0E0E0))
+                    .clickable { galleryLauncher.launch("image/*") }, // Tıklayınca galeriyi açar
+                contentAlignment = Alignment.Center
+            ) {
+                if (gorselUri != null) {
+                    // Seçilen görseli ekranda göster
+                    AsyncImage(
+                        model = gorselUri,
+                        contentDescription = "Seçilen Görsel",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Görsel yoksa bilgilendirme ikonu göster
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Image, contentDescription = "Görsel Seç", tint = Color.Gray, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Fotoğraf Seçmek İçin Dokunun", color = Color.DarkGray, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -154,7 +197,8 @@ fun ToptanciHomeScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { viewModel.urunEkle(urunAdi, fiyat, minAlim, stok) },
+                // YENİ: Fonksiyona gorselUri parametresini de yolluyoruz
+                onClick = { viewModel.urunEkle(urunAdi, fiyat, minAlim, stok, gorselUri) },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                 shape = RoundedCornerShape(12.dp)
