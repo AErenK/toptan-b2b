@@ -25,7 +25,10 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = viewModel(), onNavigateToCatalog: () -> Unit) {
+fun HomeScreen(
+    viewModel: HomeViewModel = viewModel(),
+    onNavigateToCatalog: (String) -> Unit // 1. DEĞİŞİKLİK: Artık ID (String) beklediğini söyledik
+) {
     // ViewModel'deki listeyi dinliyoruz
     val toptanciListesi by viewModel.toptancilar.collectAsState()
     Column(
@@ -46,13 +49,13 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel(), onNavigateToCatalog: () -
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 unfocusedBorderColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent // Üzerine tıklandığında da çizgi çıkmasını engeller
+                focusedBorderColor = Color.Transparent
             )
         )
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 2. Kategori Çipleri (Yatay Kaydırma)
+        // 2. Kategori Çipleri
         Text("Kategoriler", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -60,7 +63,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel(), onNavigateToCatalog: () -
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(categories.size) { index ->
                 FilterChip(
-                    selected = index == 0, // Şimdilik sadece ilki seçili görünsün
+                    selected = index == 0,
                     onClick = { },
                     label = { Text(categories[index]) },
                     colors = FilterChipDefaults.filterChipColors(
@@ -73,16 +76,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel(), onNavigateToCatalog: () -
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 3. Toptancı Listesi (Dikey Kaydırma)
+        // 3. Toptancı Listesi
         Text("Öne Çıkan Toptancılar", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Artık 5 kere sabit dönmek yerine, listedeki eleman sayısı kadar dönüyoruz
             items(toptanciListesi.size) { index ->
                 val toptanci = toptanciListesi[index]
 
-                // Sayıları TL formatına çevir (Örn: 5000.0 -> 5.000)
                 val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(toptanci.minSiparisTutari)
 
                 WholesalerCard(
@@ -90,7 +91,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel(), onNavigateToCatalog: () -
                     minOrder = "$formatliFiyat ₺",
                     ayniGunKargo = toptanci.ayniGunKargo,
                     onayliMi = toptanci.onayliMi,
-                    onCatalogClick = onNavigateToCatalog // Burayı ekledik
+                    // 2. DEĞİŞİKLİK: Toptancıya tıklandığında onun ID'sini yolluyoruz
+                    onCatalogClick = { onNavigateToCatalog(toptanci.id) }
                 )
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }

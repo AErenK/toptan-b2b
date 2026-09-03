@@ -65,10 +65,19 @@ class CartViewModel : ViewModel() {
     }
 
     // --- FİREBASE SİPARİŞ GÖNDERME ---
+    // --- FİREBASE SİPARİŞ GÖNDERME ---
     fun siparisiTamamla(toplamTutar: Double, sepetOzet: String) {
         val aktifKullanici = auth.currentUser
         if (aktifKullanici == null) {
             _siparisMesaji.value = "Hata: Oturum açmadan sipariş veremezsiniz."
+            return
+        }
+
+        // Sepetteki ilk ürünün toptanciId'sini al (Zaten sepetteki tüm ürünler aynı toptancıya aittir)
+        val toptanciId = _sepet.value.firstOrNull()?.urun?.toptanciId
+
+        if (toptanciId == null) {
+            _siparisMesaji.value = "Hata: Sipariş verilecek toptancı bulunamadı."
             return
         }
 
@@ -79,6 +88,7 @@ class CartViewModel : ViewModel() {
             "siparisId" to siparisRef.id,
             "musteriUid" to aktifKullanici.uid,
             "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
+            "toptanciId" to toptanciId, // KRİTİK EKLENTİ: Hangi toptancıya gittiği
             "siparisOzeti" to sepetOzet,
             "toplamTutar" to toplamTutar,
             "durum" to "Hazırlanıyor",

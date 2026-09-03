@@ -8,27 +8,37 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.model.Urun
+import com.example.toptan.viewmodel.CartViewModel
+import com.example.toptan.viewmodel.CatalogViewModel
 import java.text.NumberFormat
 import java.util.Locale
-import com.example.toptan.viewmodel.CartViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(cartViewModel: CartViewModel, // Burayı ekledik
-                  onBackClick: () -> Unit) {
-    // Şimdilik sahte (dummy) ürün listesi oluşturuyoruz
-    val urunler = listOf(
-        Urun(id = "U1", toptanciId = "1", ad = "Torku Küp Şeker 1KG (Koli)", fiyat = 250.0, minAlimMiktari = 50, stokMiktari = 500),
-        Urun(id = "U2", toptanciId = "1", ad = "Doğuş Çay 1KG (Koli)", fiyat = 600.0, minAlimMiktari = 20, stokMiktari = 200),
-        Urun(id = "U3", toptanciId = "1", ad = "Yudum Ayçiçek Yağı 5L (Koli)", fiyat = 850.0, minAlimMiktari = 10, stokMiktari = 100)
-    )
+fun CatalogScreen(
+    toptanciId: String, // 1. MainScreen'den gönderilen ID'yi buradan alıyoruz
+    cartViewModel: CartViewModel,
+    catalogViewModel: CatalogViewModel = viewModel(),
+    onBackClick: () -> Unit
+) {
+    // 2. Ekran açıldığı an bu ID'yi ViewModel'e yollayıp ürünleri çektiriyoruz
+    LaunchedEffect(toptanciId) {
+        catalogViewModel.urunleriGetir(toptanciId)
+    }
+
+    val urunler by catalogViewModel.urunler.collectAsState()
+    val yukleniyor by catalogViewModel.yukleniyor.collectAsState()
 
     Scaffold(
         topBar = {
@@ -44,35 +54,46 @@ fun CatalogScreen(cartViewModel: CartViewModel, // Burayı ekledik
         },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Text(
-                    text = "Toptan Ürün Kataloğu",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            items(urunler.size) { index ->
-                CatalogItemCard(
-                    urun = urunler[index],
-                    onAddToCartClick = { cartViewModel.sepeteEkle(urunler[index]) } // Fonksiyonu bağladık
+            if (yukleniyor) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (urunler.isEmpty()) {
+                Text(
+                    text = "Bu toptancıya ait henüz ürün bulunmuyor.",
+                    color = Color.Gray,
+                    modifier = Modifier.align(Alignment.Center)
                 )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Toptan Ürün Kataloğu",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+
+                    items(urunler.size) { index ->
+                        CatalogItemCard(
+                            urun = urunler[index],
+                            onAddToCartClick = { cartViewModel.sepeteEkle(urunler[index]) }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
 
 @Composable
-fun CatalogItemCard(urun: Urun,
-                    onAddToCartClick: () -> Unit) {
+fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
     val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(urun.fiyat)
 
     Card(
@@ -96,7 +117,7 @@ fun CatalogItemCard(urun: Urun,
                 }
 
                 Button(
-                    onClick = onAddToCartClick, // Burayı değiştirdik
+                    onClick = onAddToCartClick,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -108,5 +129,4 @@ fun CatalogItemCard(urun: Urun,
             }
         }
     }
-
 }

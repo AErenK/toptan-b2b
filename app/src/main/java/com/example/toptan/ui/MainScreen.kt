@@ -28,58 +28,105 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // PROJENİN ORTAK SEPET HAFIZASI
     val sharedCartViewModel: CartViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
-            // Eğer "login" ekranında DEĞİLSEK alt menüyü göster
-            if (currentRoute != "login") {
+            // Toptancıya ait tüm ekranlarda ve giriş/kayıt ekranlarında alt menüyü gizle
+            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler")
+
+            if (currentRoute !in gizlenecekEkranlar) {
                 BottomNavigationBar(navController = navController)
             }
         }
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "login", // Uygulama ilk açıldığında giriş ekranından başlasın
+            startDestination = "login",
             modifier = Modifier.padding(paddingValues)
         ) {
+
             // 1. Giriş Ekranı
             composable("login") {
                 LoginScreen(
-                    onLoginSuccess = {
-                        // Giriş başarılı olursa Keşfet'e geç, geri tuşuna basınca bir daha Login'e dönme
-                        navController.navigate("home") {
+                    onLoginSuccess = { rol ->
+                        // Rol kontrolü: Toptancıysa panele, müşteriyse keşfete
+                        val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
+                        navController.navigate(hedefEkran) {
                             popUpTo("login") { inclusive = true }
+                        }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate("register")
+                    }
+                )
+            }
+
+            // 2. Yeni Kayıt Ekranı
+            composable("register") {
+                RegisterScreen(
+                    onNavigateToLogin = { navController.popBackStack() },
+                    onRegisterSuccess = { rol ->
+                        val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
+                        navController.navigate(hedefEkran) {
+                            popUpTo(0) { inclusive = true } // Geçmişi tamamen sil
                         }
                     }
                 )
             }
 
-            // 2. Keşfet Ekranı
-            composable("home") {
-                HomeScreen(
-                    onNavigateToCatalog = { navController.navigate("catalog") }
+            // 3. Toptancı Paneli Ana Ekranı
+            // 3. Toptancı Paneli Ana Ekranı
+            composable("toptanci_home") {
+                ToptanciHomeScreen(
+                    onLogoutClick = {
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onNavigateToSiparisler = {
+                        navController.navigate("toptanci_siparisler") // YENİ: Siparişlere git
+                    }
                 )
             }
 
-            // 3. Katalog Ekranı
-            composable("catalog") {
-                CatalogScreen(
-                    cartViewModel = sharedCartViewModel, // Hafızayı gönder
+            // YENİ: Toptancı Gelen Siparişler Ekranı
+            composable("toptanci_siparisler") {
+                ToptanciSiparisScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
 
-            // Diğer Ekranlar
+            // 4. Müşteri (Dükkan) Keşfet Ekranı
+            composable("home") {
+                HomeScreen(
+                    onNavigateToCatalog = { toptanciId ->
+                        // Toptancı ID'sini rota ile yolluyoruz
+                        navController.navigate("catalog/$toptanciId")
+                    }
+                )
+            }
+
+            // 5. Katalog Ekranı (Değişen kısım)
+            composable("catalog/{toptanciId}") { backStackEntry ->
+                // Tıklanan toptancının ID'sini yakalıyoruz
+                val tiklananToptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
+
+                CatalogScreen(
+                    toptanciId = tiklananToptanciId,
+                    cartViewModel = sharedCartViewModel,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            // Diğer Müşteri Ekranları
             composable("orders") { OrdersScreen() }
             composable("cart") {
-                CartScreen(viewModel = sharedCartViewModel) // AYNI hafızayı gönder
+                CartScreen(viewModel = sharedCartViewModel)
             }
             composable("profile") {
                 ProfileScreen(
                     onLogoutClick = {
-                        // Çıkış yapıldığında Login'e dön ve geri tuşu geçmişini tamamen temizle
                         navController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
@@ -89,6 +136,7 @@ fun MainScreen() {
         }
     }
 }
+
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -98,7 +146,7 @@ fun BottomNavigationBar(navController: NavController) {
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, contentDescription = "Keşfet") },
             label = { Text("Keşfet") },
-            selected = currentRoute == "home" || currentRoute == "catalog",
+            selected = currentRoute == "home" || (currentRoute?.startsWith("catalog") == true),
             onClick = {
                 navController.navigate("home") {
                     popUpTo(navController.graph.startDestinationId) { saveState = true }

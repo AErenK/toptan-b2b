@@ -17,18 +17,19 @@ import com.example.toptan.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = viewModel(),
-    onLoginSuccess: () -> Unit // Giriş başarılı olduğunda ana sayfaya yönlendirmek için
+    onLoginSuccess: (String) -> Unit, // String (Rol) parametresi eklendi
+    onNavigateToRegister: () -> Unit // Kayıt ekranına geçiş yönlendirmesi eklendi
 ) {
     var email by remember { mutableStateOf("") }
     var sifre by remember { mutableStateOf("") }
 
     val mesaj by viewModel.mesaj.collectAsState()
-    val girisBasarili by viewModel.girisBasarili.collectAsState()
+    val kullaniciRolu by viewModel.kullaniciRolu.collectAsState() // Artık rolü dinliyoruz
 
-    // Eğer ViewModel'den "giriş başarılı" tetiklemesi gelirse ana sayfaya geç
-    LaunchedEffect(girisBasarili) {
-        if (girisBasarili) {
-            onLoginSuccess()
+    // Eğer ViewModel'den "rol" gelirse giriş başarılı demektir, ana sayfaya geç
+    LaunchedEffect(kullaniciRolu) {
+        kullaniciRolu?.let { rol ->
+            onLoginSuccess(rol)
         }
     }
 
@@ -71,7 +72,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Hata veya başarı mesajını ekranda göster
         mesaj?.let {
             Text(text = it, color = if (it.contains("başarılı")) Color(0xFF2E7D32) else Color.Red)
             Spacer(modifier = Modifier.height(8.dp))
@@ -89,7 +89,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = { viewModel.kayitOl(email, sifre) },
+            onClick = onNavigateToRegister, // Doğrudan kayıt sayfasına yönlendir
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(12.dp)
         ) {

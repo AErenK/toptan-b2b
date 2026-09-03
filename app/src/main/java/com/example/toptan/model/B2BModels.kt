@@ -2,34 +2,40 @@ package com.example.toptan.model
 
 // Toptancıların (Satıcıların) bilgilerini tutan veri modeli
 data class Toptanci(
-    val id: String,
-    val ad: String,
-    val kategori: String,
-    val minSiparisTutari: Double,
+    val id: String = "",
+    val ad: String = "",
+    val kategori: String = "",
+    val minSiparisTutari: Double = 0.0,
     val ayniGunKargo: Boolean = false,
     val onayliMi: Boolean = false
 )
 
-// Toptancıların sattığı ürünlerin veri modeli
+// Toptancıların sattığı ürünlerin veri modeli (Firestore eşleşmesi için varsayılan değerler eklendi)
 data class Urun(
-    val id: String,
-    val toptanciId: String, // Hangi toptancıya ait olduğunu bilmek için
-    val ad: String,
-    val fiyat: Double,
-    val minAlimMiktari: Int, // Perakende değil toptan olduğu için en az alınabilecek miktar (Örn: 50)
-    val stokMiktari: Int
+    val id: String = "",
+    val toptanciId: String = "",
+    val ad: String = "",
+    val fiyat: Double = 0.0,
+    val minAlimMiktari: Int = 0,
+    val stokMiktari: Int = 0,
+    val eklenmeTarihi: Long = 0L // Firestore'a kaydederken eklediğimiz tarih
 )
 
 // Sepette tutulacak ürünlerin modeli
 data class SepetOgesi(
-    val urun: Urun,
-    var secilenMiktar: Int // Kullanıcının artırıp azaltacağı miktar
+    val urun: Urun = Urun(),
+    var secilenMiktar: Int = 0
 )
 
 // Sipariş geçmişinde görünecek olan veri modeli
+// Sipariş verilerinin Firestore ile eşleşebilmesi için güncellenmiş hali
 data class Siparis(
-    val siparisNo: String,
-    val toptanciAd: String,
-    val toplamTutar: Double,
-    val durum: String // "Hazırlanıyor", "Yola Çıktı", vb.
+    val siparisId: String = "",
+    val musteriUid: String = "",
+    val musteriEmail: String = "",
+    val toptanciId: String = "",
+    val siparisOzeti: String = "",
+    val toplamTutar: Double = 0.0,
+    val durum: String = "",
+    val tarih: Long = 0L
 )
