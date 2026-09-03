@@ -27,87 +27,75 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel(),
     onLogoutClick: () -> Unit
 ) {
-    // ViewModel'den rolü dinliyoruz
     val rol by authViewModel.kullaniciRolu.collectAsState()
-
-    // Firebase'den aktif kullanıcının e-postasını anlık olarak alıyoruz
     val aktifKullanici = FirebaseAuth.getInstance().currentUser
     val userEmail = aktifKullanici?.email ?: "Bilinmeyen Kullanıcı"
-
-    // Ekranda güzel görünmesi için rol ismini düzeltiyoruz
     val rolMetni = if (rol == "toptanci") "Toptancı" else "Dükkan Sahibi"
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Diğer ekranlarla uyumlu arka plan
+            .background(Color(0xFFF8FAFC))
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Profilim", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1565C0))
-
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Profilim", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E293B))
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- PROFİL AVATARI ---
         Box(
             modifier = Modifier
                 .size(100.dp)
-                .background(Color(0xFF1565C0), shape = CircleShape),
+                .background(Color(0xFFDBEAFE), shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Person, contentDescription = "Profil Resmi", tint = Color.White, modifier = Modifier.size(60.dp))
+            Icon(Icons.Default.Person, contentDescription = "Profil Resmi", tint = Color(0xFF2563EB), modifier = Modifier.size(50.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- HESAP BİLGİLERİ KARTI ---
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text(text = "Hesap Bilgileri", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.DarkGray)
-
+                Text(text = "Hesap Bilgileri", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1E293B))
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color.LightGray, thickness = 1.dp)
+                Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // E-Posta Satırı
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Email, contentDescription = "Email", tint = Color.Gray)
+                    Icon(Icons.Default.Email, contentDescription = "Email", tint = Color(0xFF64748B))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = userEmail, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(text = userEmail, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Rol Satırı
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Star, contentDescription = "Rol", tint = Color(0xFFF57C00)) // Turuncu yıldız
+                    Icon(Icons.Default.Star, contentDescription = "Rol", tint = Color(0xFFD97706))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = "Hesap Türü: ", fontSize = 16.sp, color = Color.Gray)
-                    Text(text = rolMetni, fontSize = 16.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                    Text(text = "Hesap Türü: ", fontSize = 15.sp, color = Color(0xFF64748B))
+                    Text(text = rolMetni, fontSize = 15.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f)) // Çıkış butonunu en aşağı iter
+        Spacer(modifier = Modifier.weight(1f))
 
-        // --- ÇIKIŞ YAP BUTONU ---
         Button(
             onClick = {
                 authViewModel.cikisYap()
                 onLogoutClick()
             },
-            modifier = Modifier.fillMaxWidth().height(55.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)) // Kırmızı renk
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
         ) {
             Text("Oturumu Kapat", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
-
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

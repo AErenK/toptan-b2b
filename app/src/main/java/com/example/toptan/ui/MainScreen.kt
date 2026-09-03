@@ -15,10 +15,16 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.toptan.viewmodel.CartViewModel
 
@@ -27,16 +33,15 @@ fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     val sharedCartViewModel: CartViewModel = viewModel()
+    val sepetListesi by sharedCartViewModel.sepet.collectAsState()
+    val sepetUrunSayisi = sepetListesi.size
 
     Scaffold(
         bottomBar = {
-            // Toptancıya ait tüm ekranlarda ve giriş/kayıt ekranlarında alt menüyü gizle
             val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler")
-
             if (currentRoute !in gizlenecekEkranlar) {
-                BottomNavigationBar(navController = navController)
+                BottomNavigationBar(navController = navController, sepetUrunSayisi = sepetUrunSayisi)
             }
         }
     ) { paddingValues ->
@@ -45,12 +50,9 @@ fun MainScreen() {
             startDestination = "login",
             modifier = Modifier.padding(paddingValues)
         ) {
-
-            // 1. Giriş Ekranı
             composable("login") {
                 LoginScreen(
                     onLoginSuccess = { rol ->
-                        // Rol kontrolü: Toptancıysa panele, müşteriyse keşfete
                         val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
                         navController.navigate(hedefEkran) {
                             popUpTo("login") { inclusive = true }
@@ -61,22 +63,17 @@ fun MainScreen() {
                     }
                 )
             }
-
-            // 2. Yeni Kayıt Ekranı
             composable("register") {
                 RegisterScreen(
                     onNavigateToLogin = { navController.popBackStack() },
                     onRegisterSuccess = { rol ->
                         val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
                         navController.navigate(hedefEkran) {
-                            popUpTo(0) { inclusive = true } // Geçmişi tamamen sil
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
             }
-
-            // 3. Toptancı Paneli Ana Ekranı
-            // 3. Toptancı Paneli Ana Ekranı
             composable("toptanci_home") {
                 ToptanciHomeScreen(
                     onLogoutClick = {
@@ -85,41 +82,30 @@ fun MainScreen() {
                         }
                     },
                     onNavigateToSiparisler = {
-                        navController.navigate("toptanci_siparisler") // YENİ: Siparişlere git
+                        navController.navigate("toptanci_siparisler")
                     }
                 )
             }
-
-            // YENİ: Toptancı Gelen Siparişler Ekranı
             composable("toptanci_siparisler") {
                 ToptanciSiparisScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
-
-            // 4. Müşteri (Dükkan) Keşfet Ekranı
             composable("home") {
                 HomeScreen(
                     onNavigateToCatalog = { toptanciId ->
-                        // Toptancı ID'sini rota ile yolluyoruz
                         navController.navigate("catalog/$toptanciId")
                     }
                 )
             }
-
-            // 5. Katalog Ekranı (Değişen kısım)
             composable("catalog/{toptanciId}") { backStackEntry ->
-                // Tıklanan toptancının ID'sini yakalıyoruz
                 val tiklananToptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
-
                 CatalogScreen(
                     toptanciId = tiklananToptanciId,
                     cartViewModel = sharedCartViewModel,
                     onBackClick = { navController.popBackStack() }
                 )
             }
-
-            // Diğer Müşteri Ekranları
             composable("orders") { OrdersScreen() }
             composable("cart") {
                 CartScreen(viewModel = sharedCartViewModel)
@@ -138,11 +124,22 @@ fun MainScreen() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) { // YENİ: sepetUrunSayisi parametresi eklendi
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 8.dp
+    ) {
+        val itemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = Color(0xFF2563EB),
+            selectedTextColor = Color(0xFF2563EB),
+            unselectedIconColor = Color(0xFF64748B),
+            unselectedTextColor = Color(0xFF64748B),
+            indicatorColor = Color(0xFFDBEAFE)
+        )
+
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, contentDescription = "Keşfet") },
             label = { Text("Keşfet") },
@@ -153,7 +150,8 @@ fun BottomNavigationBar(navController: NavController) {
                     launchSingleTop = true
                     restoreState = true
                 }
-            }
+            },
+            colors = itemColors
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.List, contentDescription = "Siparişler") },
@@ -165,10 +163,26 @@ fun BottomNavigationBar(navController: NavController) {
                     launchSingleTop = true
                     restoreState = true
                 }
-            }
+            },
+            colors = itemColors
         )
+
+        // --- SEPET İKONU (ROZETLİ YAPI) ---
         NavigationBarItem(
-            icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Sepet") },
+            icon = {
+                // Material3 BadgedBox bileşeni ile kırmızı baloncuğu ekliyoruz
+                BadgedBox(
+                    badge = {
+                        if (sepetUrunSayisi > 0) {
+                            Badge(containerColor = Color.Red, contentColor = Color.White) {
+                                Text(text = sepetUrunSayisi.toString())
+                            }
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Sepet")
+                }
+            },
             label = { Text("Sepet") },
             selected = currentRoute == "cart",
             onClick = {
@@ -177,8 +191,10 @@ fun BottomNavigationBar(navController: NavController) {
                     launchSingleTop = true
                     restoreState = true
                 }
-            }
+            },
+            colors = itemColors
         )
+
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, contentDescription = "Profil") },
             label = { Text("Profil") },
@@ -189,7 +205,8 @@ fun BottomNavigationBar(navController: NavController) {
                     launchSingleTop = true
                     restoreState = true
                 }
-            }
+            },
+            colors = itemColors
         )
     }
 }

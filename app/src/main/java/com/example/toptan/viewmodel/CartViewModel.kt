@@ -109,4 +109,16 @@ class CartViewModel : ViewModel() {
     fun mesajiTemizle() {
         _siparisMesaji.value = null
     }
+
+    fun sepetiTemizle() {
+        _sepet.value = emptyList()
+        hesaplaToplamTutar()
+    }
+
+    fun urunuSil(silinecekUrunId: String) {
+        // Listeyi filtreleyip, id'si eşleşmeyenleri (yani silinmeyecekleri) tutuyoruz
+        _sepet.value = _sepet.value.filter { it.urun.id != silinecekUrunId }
+        hesaplaToplamTutar()
+    }
+
 }

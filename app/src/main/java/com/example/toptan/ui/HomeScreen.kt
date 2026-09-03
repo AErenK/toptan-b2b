@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.rounded.ArrowForwardIos
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,63 +28,93 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToCatalog: (String) -> Unit // 1. DEĞİŞİKLİK: Artık ID (String) beklediğini söyledik
+    onNavigateToCatalog: (String) -> Unit
 ) {
-    // ViewModel'deki listeyi dinliyoruz
     val toptanciListesi by viewModel.toptancilar.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-            .padding(16.dp)
+            .background(Color(0xFFF8FAFC)) // Modern açık arkaplan
+            .padding(top = 16.dp)
     ) {
-        // 1. Arama Çubuğu
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            placeholder = { Text("Toptancı veya toplu ürün ara...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Ara") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                unfocusedBorderColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent
+        // Üst Kısım: Padding içinde
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = "Toptancıları Keşfet",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF1E293B)
             )
-        )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+            // Modern Arama Çubuğu
+            OutlinedTextField(
+                value = "",
+                onValueChange = {},
+                placeholder = { Text("Toptancı veya ürün ara...", color = Color(0xFF94A3B8)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Ara", tint = Color(0xFF64748B)) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(50), // Tam yuvarlak pill shape
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color(0xFFE2E8F0),
+                    focusedBorderColor = Color(0xFF2563EB)
+                ),
+                singleLine = true
+            )
 
-        // 2. Kategori Çipleri
-        Text("Kategoriler", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Kategoriler", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B))
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
+        // Kategori Çipleri
         val categories = listOf("Tümü", "Gıda", "Tekstil", "Elektronik", "Ambalaj", "Temizlik")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
             items(categories.size) { index ->
                 FilterChip(
                     selected = index == 0,
                     onClick = { },
-                    label = { Text(categories[index]) },
+                    label = { Text(categories[index], fontWeight = FontWeight.Medium) },
+                    shape = RoundedCornerShape(50),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF1565C0),
-                        selectedLabelColor = Color.White
+                        selectedContainerColor = Color(0xFF2563EB),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.White,
+                        labelColor = Color(0xFF64748B)
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = index == 0,
+                        borderColor = Color(0xFFE2E8F0)
                     )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // 3. Toptancı Listesi
-        Text("Öne Çıkan Toptancılar", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(8.dp))
+        // Toptancı Listesi
+        Text(
+            text = "Öne Çıkan Toptancılar",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = Color(0xFF1E293B),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             items(toptanciListesi.size) { index ->
                 val toptanci = toptanciListesi[index]
-
                 val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(toptanci.minSiparisTutari)
 
                 WholesalerCard(
@@ -91,11 +122,10 @@ fun HomeScreen(
                     minOrder = "$formatliFiyat ₺",
                     ayniGunKargo = toptanci.ayniGunKargo,
                     onayliMi = toptanci.onayliMi,
-                    // 2. DEĞİŞİKLİK: Toptancıya tıklandığında onun ID'sini yolluyoruz
                     onCatalogClick = { onNavigateToCatalog(toptanci.id) }
                 )
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(80.dp)) } // Alt menü boşluğu
         }
     }
 }
@@ -104,36 +134,52 @@ fun HomeScreen(
 fun WholesalerCard(name: String, minOrder: String, ayniGunKargo: Boolean, onayliMi: Boolean, onCatalogClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp), // Daha modern yuvarlak köşe
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onCatalogClick // Artık karta tıklayınca direkt gidiyor!
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Default.Verified,
-                    contentDescription = "Onaylı",
-                    tint = Color(0xFF1976D2),
-                    modifier = Modifier.size(18.dp)
-                )
+        Row(
+            modifier = Modifier.padding(20.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = name, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF1E293B))
+                    if (onayliMi) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = "Onaylı",
+                            tint = Color(0xFF3B82F6), // Güven veren mavi
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(text = "Min. Sepet: $minOrder", fontSize = 14.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+
+                if (ayniGunKargo) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFDCFCE7), shape = RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = "Hızlı Teslimat", fontSize = 12.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                    }
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Min. Sepet Tutarı: $minOrder", fontSize = 14.sp, color = Color.DarkGray)
-            Text(text = "Aynı Gün Kargo", fontSize = 14.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick =  onCatalogClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-            ) {
-                Text("Kataloğu İncele")
-            }
+            // Sağdaki modern ok işareti
+            Icon(
+                imageVector = Icons.Rounded.ArrowForwardIos,
+                contentDescription = "İncele",
+                tint = Color(0xFFCBD5E1),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

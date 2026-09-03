@@ -32,12 +32,11 @@ import coil.compose.AsyncImage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
-    toptanciId: String, // 1. MainScreen'den gönderilen ID'yi buradan alıyoruz
+    toptanciId: String,
     cartViewModel: CartViewModel,
     catalogViewModel: CatalogViewModel = viewModel(),
     onBackClick: () -> Unit
 ) {
-    // 2. Ekran açıldığı an bu ID'yi ViewModel'e yollayıp ürünleri çektiriyoruz
     LaunchedEffect(toptanciId) {
         catalogViewModel.urunleriGetir(toptanciId)
     }
@@ -48,42 +47,33 @@ fun CatalogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Marmara Toptan Gıda", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text("Toptancı Kataloğu", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
             )
         },
-        containerColor = Color(0xFFF5F5F5)
+        containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-
             if (yukleniyor) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF2563EB))
             } else if (urunler.isEmpty()) {
                 Text(
-                    text = "Bu toptancıya ait henüz ürün bulunmuyor.",
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.Center)
+                    text = "Bu toptancıya ait ürün bulunmuyor.",
+                    color = Color(0xFF64748B),
+                    modifier = Modifier.align(Alignment.Center),
+                    fontWeight = FontWeight.Medium
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
-                    item {
-                        Text(
-                            text = "Toptan Ürün Kataloğu",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                        )
-                    }
-
                     items(urunler.size) { index ->
                         CatalogItemCard(
                             urun = urunler[index],
@@ -103,60 +93,56 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- 1. GÖRSEL ALANI (SOL TARAF) ---
             if (urun.gorselUrl.isNotEmpty()) {
                 AsyncImage(
                     model = urun.gorselUrl,
                     contentDescription = urun.ad,
                     modifier = Modifier
-                        .size(90.dp)
-                        .clip(RoundedCornerShape(8.dp)), // Köşeleri hafif yuvarlatılmış kare
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(16.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Eğer ürünün fotoğrafı yoksa şık bir gri yer tutucu (placeholder) gösteriyoruz
                 Box(
                     modifier = Modifier
-                        .size(90.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF0F0F0)),
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF1F5F9)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Image, contentDescription = "Görsel Yok", tint = Color.Gray, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.Image, contentDescription = "Görsel Yok", tint = Color(0xFF94A3B8), modifier = Modifier.size(32.dp))
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // --- 2. ÜRÜN BİLGİLERİ VE BUTON (SAĞ TARAF) ---
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1E293B))
                 Spacer(modifier = Modifier.height(4.dp))
-
-                Text(text = "$formatliFiyat ₺ / Adet", color = Color(0xFF1565C0), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 12.sp, color = Color.Gray)
+                Text(text = "$formatliFiyat ₺ / Adet", color = Color(0xFF2563EB), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 12.sp, color = Color(0xFF64748B))
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Butonu sağa yaslıyoruz
                 Button(
                     onClick = onAddToCartClick,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
                     modifier = Modifier.align(Alignment.End),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Ekle", modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Sepete Ekle")
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Ekle", modifier = Modifier.size(16.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Sepete Ekle", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
