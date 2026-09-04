@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,12 +45,35 @@ fun OrdersScreen(viewModel: MusteriSiparisViewModel = viewModel()) {
             if (yukleniyor) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF2563EB))
             } else if (siparisler.isEmpty()) {
-                Text(
-                    text = "Henüz hiç sipariş vermediniz.",
-                    color = Color(0xFF64748B),
+
+                // YENİ: Şık Boş Durum (Empty State) Tasarımı
+                Column(
                     modifier = Modifier.align(Alignment.Center),
-                    fontWeight = FontWeight.Medium
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingBag,
+                        contentDescription = "Sipariş Yok",
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(120.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Henüz sipariş vermediniz",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Katalogdan ürün seçerek ilk toptan siparişinizi hemen oluşturabilirsiniz.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                }
+
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -73,7 +98,7 @@ fun MusteriSiparisKarti(siparis: Siparis) {
     val (durumRengi, arkaPlanRenk) = when (siparis.durum) {
         "Yola Çıktı" -> Pair(Color(0xFFD97706), Color(0xFFFEF3C7))
         "Teslim Edildi" -> Pair(Color(0xFF16A34A), Color(0xFFDCFCE7))
-        else -> Pair(Color(0xFF2563EB), Color(0xFFDBEAFE))
+        else -> Pair(Color(0xFF2563EB), Color(0xFFDBEAFE)) // Hazırlanıyor veya diğer durumlar
     }
 
     Card(

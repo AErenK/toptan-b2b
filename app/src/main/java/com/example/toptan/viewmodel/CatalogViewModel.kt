@@ -5,6 +5,7 @@ import com.example.toptan.model.Urun
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class CatalogViewModel : ViewModel() {
 
@@ -16,10 +17,12 @@ class CatalogViewModel : ViewModel() {
     private val _yukleniyor = MutableStateFlow(true)
     val yukleniyor: StateFlow<Boolean> = _yukleniyor
 
-    // INIT BLOĞUNU KALDIRDIK. Fonksiyon çağrıldığında çalışacak.
+    // YENİ: Arama metnini tutacak state
+    private val _aramaMetni = MutableStateFlow("")
+    val aramaMetni: StateFlow<String> = _aramaMetni.asStateFlow()
+
     fun urunleriGetir(toptanciId: String) {
         _yukleniyor.value = true
-        // SADECE tıklanan toptancıya ait ürünleri filtrele: .whereEqualTo("toptanciId", toptanciId)
         firestore.collection("urunler")
             .whereEqualTo("toptanciId", toptanciId)
             .addSnapshotListener { snapshot, hata ->
@@ -32,5 +35,10 @@ class CatalogViewModel : ViewModel() {
                 _urunler.value = liste
                 _yukleniyor.value = false
             }
+    }
+
+    // YENİ: Arama metnini güncelleyen fonksiyon
+    fun aramaMetniniGuncelle(yeniMetin: String) {
+        _aramaMetni.value = yeniMetin
     }
 }

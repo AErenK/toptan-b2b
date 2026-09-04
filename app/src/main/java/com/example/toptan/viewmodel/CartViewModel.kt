@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.toptan.model.Urun // Kendi modelini import ettik
+import kotlinx.coroutines.flow.asStateFlow
 
 // Sepet öğesi mantığı (ViewModel içinde kalabilir)
 data class SepetOgesi(val urun: Urun, var secilenMiktar: Int)
@@ -23,6 +24,8 @@ class CartViewModel : ViewModel() {
 
     private val _siparisMesaji = MutableStateFlow<String?>(null)
     val siparisMesaji: StateFlow<String?> = _siparisMesaji
+    private val _siparisBasarili = MutableStateFlow(false)
+    val siparisBasarili: StateFlow<Boolean> = _siparisBasarili.asStateFlow()
 
     // --- KATALOGDAN SEPETE ÜRÜN EKLEME FONKSİYONU ---
     fun sepeteEkle(urun: Urun) {
@@ -97,6 +100,7 @@ class CartViewModel : ViewModel() {
 
         siparisRef.set(yeniSiparis)
             .addOnSuccessListener {
+                _siparisBasarili.value = true // YENİ: Başarılı ekranını tetikler
                 _siparisMesaji.value = "Sipariş Başarıyla Oluşturuldu!"
                 _sepet.value = emptyList() // Sipariş sonrası sepeti temizle
                 hesaplaToplamTutar()
@@ -119,6 +123,10 @@ class CartViewModel : ViewModel() {
         // Listeyi filtreleyip, id'si eşleşmeyenleri (yani silinmeyecekleri) tutuyoruz
         _sepet.value = _sepet.value.filter { it.urun.id != silinecekUrunId }
         hesaplaToplamTutar()
+    }
+
+    fun siparisBasariliDurumunuSifirla() {
+        _siparisBasarili.value = false
     }
 
 }
