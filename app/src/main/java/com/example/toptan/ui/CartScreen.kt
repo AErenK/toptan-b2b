@@ -9,8 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,10 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.toptan.viewmodel.CartViewModel
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
@@ -48,38 +52,35 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sepetim", fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E293B)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC)),
+                title = { Text("Toplu Sepetim", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
                 actions = {
                     if (sepetListesi.isNotEmpty()) {
                         IconButton(onClick = { viewModel.sepetiTemizle() }) {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Temizle", tint = Color(0xFFEF4444))
+                            Icon(Icons.Default.Delete, contentDescription = "Sepeti Temizle", tint = Color.Red)
                         }
                     }
                 }
             )
         },
         bottomBar = {
-            Column {
-                siparisMesaji?.let { mesaj ->
-                    Surface(
-                        color = if (mesaj.contains("Başarı")) Color(0xFFDCFCE7) else Color(0xFFFEE2E2),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+            // YENİ: Sepet boşsa alt kısımdaki ödeme barını tamamen gizliyoruz
+            if (sepetListesi.isNotEmpty()) {
+                Column {
+                    siparisMesaji?.let { mesaj ->
                         Text(
                             text = mesaj,
-                            color = if (mesaj.contains("Başarı")) Color(0xFF16A34A) else Color(0xFFEF4444),
+                            color = if (mesaj.contains("Başarı")) Color(0xFF2E7D32) else Color.Red,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
-                }
 
-                CheckoutBar(
-                    totalPrice = "$formatliToplam ₺",
-                    onCheckoutClick = {
-                        if (sepetListesi.isNotEmpty()) {
+                    CheckoutBar(
+                        totalPrice = "$formatliToplam ₺",
+                        onCheckoutClick = {
                             val siparisOzeti = sepetListesi.joinToString(", ") {
                                 "${it.secilenMiktar}x ${it.urun.ad}"
                             }
@@ -88,36 +89,75 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
                                 sepetOzet = siparisOzeti
                             )
                         }
-                    }
-                )
+                    )
+                }
             }
         },
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            items(items = sepetListesi, key = { oge -> oge.urun.id }) { oge ->
-                val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(oge.urun.fiyat)
-
-                CartItemCard(
-                    productName = oge.urun.ad,
-                    minAlim = "Min. ${oge.urun.minAlimMiktari} Adet",
-                    price = "$formatliBirimFiyat ₺",
-                    quantity = oge.secilenMiktar,
-                    onIncrease = { viewModel.miktarArtir(oge.urun.id) },
-                    onDecrease = { viewModel.miktarAzalt(oge.urun.id) },
-                    onDelete = { viewModel.urunuSil(oge.urun.id) }
-                )
+        // YENİ: Boş Ekran (Empty State) Kontrolü
+        if (sepetListesi.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = "Boş Sepet",
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(120.dp) // Büyük ve şık bir ikon
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Sepetiniz şu an boş",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Katalogdan ürün seçerek sepetinizi hemen doldurabilirsiniz.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                }
             }
+        } else {
+            // Sepet doluysa listeyi göster
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            item { Spacer(modifier = Modifier.height(24.dp)) }
+                items(
+                    items = sepetListesi,
+                    key = { oge -> oge.urun.id }
+                ) { oge ->
+                    val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(oge.urun.fiyat)
+
+                    CartItemCard(
+                        productName = "${oge.urun.ad} (Min. ${oge.urun.minAlimMiktari})",
+                        price = "$formatliBirimFiyat ₺",
+                        quantity = oge.secilenMiktar,
+                        imageUrl = oge.urun.gorselUrl,
+                        onIncrease = { viewModel.miktarArtir(oge.urun.id) },
+                        onDecrease = { viewModel.miktarAzalt(oge.urun.id) },
+                        onDelete = { viewModel.urunuSil(oge.urun.id) }
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
         }
     }
 }
@@ -125,97 +165,115 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
 @Composable
 fun CartItemCard(
     productName: String,
-    minAlim: String,
     price: String,
     quantity: Int,
+    imageUrl: String,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Flat, temiz görünüm
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = productName, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1E293B))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = minAlim, fontSize = 12.sp, color = Color(0xFF94A3B8))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = price, color = Color(0xFF2563EB), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-            }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Miktar Kontrol Kapsülü
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(Color(0xFFF1F5F9), shape = RoundedCornerShape(50))
-                    .padding(horizontal = 4.dp, vertical = 4.dp)
-            ) {
-                IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Remove, contentDescription = "Azalt", tint = Color(0xFF1E293B), modifier = Modifier.size(16.dp))
-                }
-                Text(
-                    text = quantity.toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = Color(0xFF1E293B),
-                    modifier = Modifier.padding(horizontal = 8.dp)
+            if (imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = productName,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
                 )
-                IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = "Artır", tint = Color(0xFF1E293B), modifier = Modifier.size(16.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF0F0F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Image, contentDescription = "Görsel Yok", tint = Color.Gray, modifier = Modifier.size(24.dp))
                 }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Silme Butonu
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFFFEE2E2), shape = CircleShape)
-            ) {
-                Icon(Icons.Outlined.DeleteOutline, contentDescription = "Sil", tint = Color(0xFFEF4444), modifier = Modifier.size(20.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = productName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = price, color = Color(0xFF1565C0), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Remove, contentDescription = "Azalt", modifier = Modifier.size(20.dp))
+                    }
+
+                    Text(
+                        text = quantity.toString(),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Add, contentDescription = "Artır", modifier = Modifier.size(20.dp))
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFFFFEBEE), shape = CircleShape)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Ürünü Sil", tint = Color.Red, modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun CheckoutBar(totalPrice: String, onCheckoutClick: () -> Unit) {
+fun CheckoutBar(
+    totalPrice: String,
+    onCheckoutClick: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 24.dp, // Derinlik hissiyatı için
-        color = Color.White,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shadowElevation = 16.dp,
+        color = Color.White
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 20.dp)
-                .navigationBarsPadding() // Alt barlar (ekran altı) için boşluk
+                .padding(16.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(text = "Toplam Tutar", fontSize = 13.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
-                Text(text = totalPrice, fontWeight = FontWeight.Black, fontSize = 22.sp, color = Color(0xFF1E293B))
+                Text(text = "Genel Toplam", fontSize = 12.sp, color = Color.Gray)
+                Text(text = totalPrice, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
             }
             Button(
                 onClick = onCheckoutClick,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)), // Başarı/Güven yeşili
-                modifier = Modifier.height(56.dp).padding(start = 16.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
             ) {
-                Text("Siparişi Tamamla", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Siparişi Tamamla")
             }
         }
     }
