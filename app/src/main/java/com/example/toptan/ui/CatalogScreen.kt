@@ -1,13 +1,18 @@
 package com.example.toptan.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -21,9 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,18 +57,32 @@ fun CatalogScreen(
     val urunler by catalogViewModel.urunler.collectAsState()
     val yukleniyor by catalogViewModel.yukleniyor.collectAsState()
 
-    // ÇÖZÜM BURADA: Arama metnini artık UI'ın kendi içinde tutuyoruz (Çok daha hızlı çalışır)
     var aramaMetni by remember { mutableStateOf("") }
 
-    // Ürünleri lokal metne göre anında filtreliyoruz
-    val filtrelenmisUrunler = urunler.filter {
-        it.ad.contains(aramaMetni, ignoreCase = true)
+    val filtrelenmisUrunler = remember(urunler, aramaMetni) {
+        if (aramaMetni.isBlank()) urunler
+        else urunler.filter { it.ad.contains(aramaMetni, ignoreCase = true) }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Toptancı Kataloğu", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+                title = {
+                    Column {
+                        Text(
+                            text = "Toptancı Kataloğu",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = Color(0xFF1E293B)
+                        )
+                        Text(
+                            text = "${urunler.size} ürün listeleniyor",
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B))
@@ -71,60 +93,101 @@ fun CatalogScreen(
         },
         containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            if (yukleniyor) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF2563EB))
-                }
-            } else if (urunler.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Bu toptancıya ait ürün bulunmuyor.", color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
-                }
-            } else {
-                // ŞIK ARAMA ÇUBUĞU
+            // Hafif Üst Gradyan Efekti
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF2563EB).copy(alpha = 0.05f), Color.Transparent)
+                        )
+                    )
+            )
+
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // ŞIK VE AKICI ARAMA ÇUBUĞU
                 OutlinedTextField(
                     value = aramaMetni,
-                    onValueChange = { aramaMetni = it }, // Doğrudan UI state'ini güncelliyoruz
+                    onValueChange = { aramaMetni = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Ürün ara (Örn: Çay, Şeker...)", color = Color.Gray) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Ara", tint = Color.Gray) },
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(54.dp),
+                    placeholder = { Text("Kataloğda ürün ara...", color = Color(0xFF94A3B8), fontSize = 14.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Ara", tint = Color(0xFF64748B)) },
                     trailingIcon = {
-                        if (aramaMetni.isNotEmpty()) {
-                            IconButton(onClick = { aramaMetni = "" }) { // Temizleme butonu
-                                Icon(Icons.Default.Clear, contentDescription = "Temizle", tint = Color.Gray)
+                        AnimatedVisibility(
+                            visible = aramaMetni.isNotEmpty(),
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            IconButton(onClick = { aramaMetni = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Temizle", tint = Color(0xFF64748B))
                             }
                         }
                     },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF2563EB),
-                        unfocusedBorderColor = Color(0xFFCBD5E1),
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     ),
                     singleLine = true
                 )
 
-                if (filtrelenmisUrunler.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Aradığınız kriterlere uygun ürün bulunamadı.", color = Color.Gray)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp)
-                    ) {
-                        items(filtrelenmisUrunler.size) { index ->
-                            CatalogItemCard(
-                                urun = filtrelenmisUrunler[index],
-                                onAddToCartClick = { cartViewModel.sepeteEkle(filtrelenmisUrunler[index]) }
-                            )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                when {
+                    yukleniyor -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFF2563EB))
                         }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    urunler.isEmpty() -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .background(Color(0xFFE2E8F0), shape = CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Inventory2, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(36.dp))
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text("Bu toptancıya ait ürün bulunmuyor.", color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                    }
+                    filtrelenmisUrunler.isEmpty() -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Aradığınız kriterlere uygun ürün bulunamadı.", color = Color(0xFF64748B), fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)
+                        ) {
+                            items(filtrelenmisUrunler.size) { index ->
+                                CatalogItemCard(
+                                    urun = filtrelenmisUrunler[index],
+                                    onAddToCartClick = { cartViewModel.sepeteEkle(filtrelenmisUrunler[index]) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -138,56 +201,95 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (urun.gorselUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = urun.gorselUrl,
-                    contentDescription = urun.ad,
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFFF1F5F9)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Image, contentDescription = "Görsel Yok", tint = Color(0xFF94A3B8), modifier = Modifier.size(32.dp))
+            // Şık Görsel Alanı
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFF1F5F9)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (urun.gorselUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = urun.gorselUrl,
+                        contentDescription = urun.ad,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = "Görsel Yok",
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
+            // Ürün Detayları ve Aksiyon Butonu
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1E293B))
+                Text(
+                    text = urun.ad,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF1E293B),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "$formatliFiyat ₺ / Adet", color = Color(0xFF2563EB), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+
+                Text(
+                    text = "$formatliFiyat ₺ / Adet",
+                    color = Color(0xFF2563EB),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp
+                )
+
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 12.sp, color = Color(0xFF64748B))
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Min. Alım: ${urun.minAlimMiktari} Adet",
+                    fontSize = 12.sp,
+                    color = Color(0xFF64748B),
+                    fontWeight = FontWeight.Medium
+                )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Sepete Ekle Butonu
                 Button(
                     onClick = onAddToCartClick,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
                     modifier = Modifier.align(Alignment.End),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Ekle", modifier = Modifier.size(16.dp), tint = Color.White)
+                    Icon(
+                        Icons.Default.ShoppingCart,
+                        contentDescription = "Ekle",
+                        modifier = Modifier.size(15.dp),
+                        tint = Color.White
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Sepete Ekle", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(
+                        "Sepete Ekle",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }

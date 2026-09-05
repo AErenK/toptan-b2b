@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -15,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
@@ -27,87 +30,145 @@ import com.google.firebase.auth.FirebaseAuth
 fun ProfileScreen(
     onLogoutClick: () -> Unit
 ) {
-    // Firebase'den anlık giriş yapmış kullanıcının bilgilerini alıyoruz
     val user = FirebaseAuth.getInstance().currentUser
     val userEmail = user?.email ?: "Kullanıcı bulunamadı"
 
-    // Çıkış yapma uyarı penceresini (Dialog) gösterip gizlemek için durum (state)
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profilim", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                title = {
+                    Text(
+                        "Profilim",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF1E293B)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
             )
         },
-        containerColor = Color(0xFFF5F5F5)
+        containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // --- 1. PROFIL KARTI ---
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+
+            // Arka plana hafif tasarım derinliği (Degrade)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF2563EB).copy(alpha = 0.05f), Color.Transparent)
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
+                // --- 1. PROFIL KARTI (Daha Modern & Zarif) ---
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Avatar Çemberi
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFDBEAFE)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profil Resmi",
+                                tint = Color(0xFF2563EB),
+                                modifier = Modifier.size(42.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = userEmail,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color(0xFF1E293B)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Aktif Kullanıcı Rozeti
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFFDCFCE7), shape = RoundedCornerShape(20.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Aktif Müşteri Hesabı",
+                                color = Color(0xFF16A34A),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // --- 2. HIZLI ERİŞİM MENÜSÜ ---
+                ProfileMenuItem(
+                    icon = Icons.Default.Settings,
+                    title = "Hesap Ayarları"
+                ) { /* Şimdilik boş */ }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ProfileMenuItem(
+                    icon = Icons.Default.SupportAgent,
+                    title = "Yardım ve Destek"
+                ) { /* Şimdilik boş */ }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // --- 3. ÇIKIŞ YAP BUTONU ---
+                Button(
+                    onClick = { showLogoutDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEF2F2)),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    // Mavi Yuvarlak İçinde Kullanıcı İkonu (Avatar)
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE3F2FD)), // Açık Mavi Arkaplan
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profil Resmi",
-                            tint = Color(0xFF1976D2), // Koyu Mavi İkon
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Firebase'den Gelen E-posta
-                    Text(text = userEmail, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Aktif Kullanıcı", color = Color.Gray, fontSize = 14.sp)
+                    Icon(
+                        Icons.Default.ExitToApp,
+                        contentDescription = "Çıkış",
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Çıkış Yap",
+                        color = Color(0xFFEF4444),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- 2. HIZLI ERİŞİM MENÜSÜ ---
-            ProfileMenuItem(icon = Icons.Default.Settings, title = "Hesap Ayarları") { /* Şimdilik boş */ }
-            Spacer(modifier = Modifier.height(12.dp))
-            ProfileMenuItem(icon = Icons.Default.SupportAgent, title = "Yardım ve Destek") { /* Şimdilik boş */ }
-
-            Spacer(modifier = Modifier.weight(1f)) // Çıkış butonunu ekranın en altına iter
-
-            // --- 3. ÇIKIŞ YAP BUTONU ---
-            Button(
-                onClick = { showLogoutDialog = true }, // Butona basınca Dialog'u aç
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE)), // Açık kırmızı
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(vertical = 14.dp)
-            ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = "Çıkış", tint = Color.Red)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Çıkış Yap", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -115,39 +176,54 @@ fun ProfileScreen(
     // --- 4. ÇIKIŞ ONAY PENCERESİ (DIALOG) ---
     if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showLogoutDialog = false }, // Dışarı tıklanırsa kapat
-            title = { Text(text = "Çıkış Yap", fontWeight = FontWeight.Bold) },
-            text = { Text(text = "Hesabınızdan çıkış yapmak istediğinize emin misiniz?") },
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text(
+                    text = "Çıkış Yap",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF1E293B)
+                )
+            },
+            text = {
+                Text(
+                    text = "Hesabınızdan çıkış yapmak istediğinize emin misiniz?",
+                    fontSize = 14.sp,
+                    color = Color(0xFF64748B)
+                )
+            },
+            shape = RoundedCornerShape(20.dp),
             containerColor = Color.White,
             confirmButton = {
                 Button(
                     onClick = {
                         showLogoutDialog = false
-                        FirebaseAuth.getInstance().signOut() // Firebase'den çıkış yap
-                        onLogoutClick() // MainScreen'deki navigasyonu tetikle
+                        FirebaseAuth.getInstance().signOut()
+                        onLogoutClick()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)) // Kırmızı
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Evet, Çıkış Yap", color = Color.White)
+                    Text("Evet, Çıkış Yap", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("İptal", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("İptal", color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
                 }
             }
         )
     }
 }
 
-// Menü Elemanları İçin Yardımcı Tasarım Fonksiyonu
+// Menü Elemanları İçin Geliştirilmiş Tasarım Bileşeni
 @Composable
 fun ProfileMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -155,11 +231,38 @@ fun ProfileMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(imageVector = icon, contentDescription = title, tint = Color(0xFF1565C0))
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = title, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0xFFF1F5F9), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF1E293B)
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Git",
+                tint = Color(0xFFCBD5E1),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

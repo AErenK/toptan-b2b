@@ -3,6 +3,7 @@ package com.example.toptan.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -15,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,10 +42,33 @@ fun ToptanciSiparisScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gelen Siparişler", fontWeight = FontWeight.Bold, color = Color(0xFF1E293B), fontSize = 18.sp) },
+                title = {
+                    Column {
+                        Text(
+                            text = "Gelen Siparişler",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF1E293B)
+                        )
+                        if (siparisler.isNotEmpty()) {
+                            Text(
+                                text = "${siparisler.size} aktif sipariş",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B))
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .padding(start = 4.dp)
+                            .size(38.dp)
+                            .background(Color(0xFFF1F5F9), shape = CircleShape)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B), modifier = Modifier.size(18.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
@@ -52,43 +77,60 @@ fun ToptanciSiparisScreen(
         containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+
+            // Arka plana hafif tasarım derinliği (Degrade)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF2563EB).copy(alpha = 0.04f), Color.Transparent)
+                        )
+                    )
+            )
+
             if (yukleniyor) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF2563EB))
-            } else if (siparisler.isEmpty()) {
-
-                // YENİ: Şık Boş Durum (Empty State) Tasarımı
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Inbox,
-                        contentDescription = "Boş Sipariş Kutusu",
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(120.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Henüz siparişiniz yok",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Müşterilerinizden gelen yeni siparişler anlık olarak burada listelenecektir.",
-                        fontSize = 14.sp,
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF2563EB))
                 }
-
+            } else if (siparisler.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .background(Color(0xFFE2E8F0), shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Inbox,
+                                contentDescription = "Boş Sipariş Kutusu",
+                                tint = Color(0xFF94A3B8),
+                                modifier = Modifier.size(42.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Text("Henüz siparişiniz yok", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Müşterilerinizden gelen yeni siparişler anlık olarak burada listelenecektir.",
+                            fontSize = 13.sp, color = Color(0xFF64748B), textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
                 ) {
                     items(siparisler.size) { index ->
                         SiparisKarti(
@@ -121,67 +163,142 @@ fun SiparisKarti(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "Müşteri: ${siparis.musteriEmail}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E293B))
-                Text(text = tarihTemsili, fontSize = 12.sp, color = Color(0xFF94A3B8))
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Üst Kısım: Müşteri Bilgisi ve Tarih
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = siparis.musteriEmail,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = Color(0xFF1E293B),
+                    maxLines = 1
+                )
+                Text(
+                    text = tarihTemsili,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF64748B)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "Sipariş İçeriği:", fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = siparis.siparisOzeti, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF334155))
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            // Orta Kısım: Sipariş Özeti
+            Text(
+                text = "Sipariş İçeriği",
+                fontSize = 11.sp,
+                color = Color(0xFF94A3B8),
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = siparis.siparisOzeti,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = Color(0xFF334155)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Alt Kısım: Toplam Tutar ve Durum Rozeti
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
-                    Text(text = "Toplam Tutar", fontSize = 12.sp, color = Color(0xFF64748B))
-                    Text(text = "$formatliTutar ₺", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF16A34A))
+                    Text(
+                        text = "Toplam Tutar",
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "$formatliTutar ₺",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
+                        color = Color(0xFF16A34A)
+                    )
                 }
 
                 Box(
                     modifier = Modifier
-                        .background(arkaPlanRenk, shape = RoundedCornerShape(50))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .background(arkaPlanRenk, shape = RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = "Durum", tint = durumRengi, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = siparis.durum, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = durumRengi)
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Durum",
+                            tint = durumRengi,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = siparis.durum,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = durumRengi
+                        )
                     }
                 }
             }
 
+            // Aksiyon Butonları
             if (siparis.durum == "Hazırlanıyor") {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Button(
                     onClick = { onDurumDegistir(siparis.siparisId, "Yola Çıktı") },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(Icons.Default.LocalShipping, contentDescription = "Kargo", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.LocalShipping,
+                        contentDescription = "Kargo",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Kargoya Verildi Olarak İşaretle", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        "Kargoya Verildi Olarak İşaretle",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
             } else if (siparis.durum == "Yola Çıktı") {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Button(
                     onClick = { onDurumDegistir(siparis.siparisId, "Teslim Edildi") },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Teslim", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Teslim",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Teslim Edildi Olarak İşaretle", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        "Teslim Edildi Olarak İşaretle",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }

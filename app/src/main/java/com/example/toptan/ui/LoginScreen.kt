@@ -1,15 +1,24 @@
 package com.example.toptan.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,100 +42,164 @@ fun LoginScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8FAFC)) // Çok hafif modern arka plan
-            .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFFF8FAFC))
     ) {
-        // Modern Logo / Başlık Alanı
+        // Arka plana hafif modern gradyan derinliği
         Box(
             modifier = Modifier
-                .size(80.dp)
-                .background(Color(0xFFE0E7FF), shape = RoundedCornerShape(24.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("B2B", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color(0xFF2563EB))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Hoş Geldiniz",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF1E293B)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Dükkanınız için toptan alışveriş", color = Color(0xFF64748B), fontSize = 15.sp)
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("E-posta Adresi") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF2563EB),
-                unfocusedBorderColor = Color(0xFFE2E8F0),
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            ),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = sifre,
-            onValueChange = { sifre = it },
-            label = { Text("Şifre") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF2563EB),
-                unfocusedBorderColor = Color(0xFFE2E8F0),
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            ),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        mesaj?.let {
-            Text(
-                text = it,
-                color = if (it.contains("başarılı")) Color(0xFF10B981) else Color(0xFFEF4444),
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        Button(
-            onClick = { viewModel.girisYap(email, sifre) },
-            modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp), // Daha dolgun modern buton
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-        ) {
-            Text("Giriş Yap", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        }
+                .height(260.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF2563EB).copy(alpha = 0.08f), Color.Transparent)
+                    )
+                )
+        )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = onNavigateToRegister,
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Hesabın yok mu? Kayıt Ol", fontSize = 15.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+            // Şık Logo Kutusu
+            Box(
+                modifier = Modifier
+                    .size(84.dp)
+                    .background(Color(0xFF2563EB), shape = RoundedCornerShape(24.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "B2B",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Hoş Geldiniz 👋",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF1E293B)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Dükkanınız için güvenli toptan alışveriş platformu",
+                color = Color(0xFF64748B),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            // E-posta Giriş Alanı
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("E-posta Adresi", color = Color(0xFF64748B)) },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color(0xFF64748B)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF2563EB),
+                    unfocusedBorderColor = Color(0xFFE2E8F0),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Şifre Giriş Alanı
+            OutlinedTextField(
+                value = sifre,
+                onValueChange = { sifre = it },
+                label = { Text("Şifre", color = Color(0xFF64748B)) },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF2563EB),
+                    unfocusedBorderColor = Color(0xFFE2E8F0),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Bildirim/Hata Mesajı Animasyonu
+            AnimatedVisibility(
+                visible = !mesaj.isNullOrEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFFDCFCE7) else Color(0xFFFEF2F2)
+                ) {
+                    Text(
+                        text = mesaj ?: "",
+                        color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF16A34A) else Color(0xFFEF4444),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(12.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            if (!mesaj.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Giriş Yap Butonu
+            Button(
+                onClick = { viewModel.girisYap(email, sifre) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            ) {
+                Text(
+                    text = "Giriş Yap",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Kayıt Ol Geçiş Butonu
+            TextButton(
+                onClick = onNavigateToRegister,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Hesabın yok mu? Kayıt Ol",
+                    fontSize = 14.sp,
+                    color = Color(0xFF64748B),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }

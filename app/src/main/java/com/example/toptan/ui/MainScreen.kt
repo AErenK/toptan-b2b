@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.toptan.viewmodel.CartViewModel
 
@@ -39,12 +40,13 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            // YENİ: toptanci_urun_ekle sayfası da eklendi, böylece form doldururken alttaki menü kaybolacak
-            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler", "toptanci_urun_ekle")
+            // Toptancı sayfalarında ve Auth ekranlarında alt menüyü gizliyoruz
+            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler", "toptanci_urun_ekle", "toptanci_katalog")
             if (currentRoute !in gizlenecekEkranlar) {
                 BottomNavigationBar(navController = navController, sepetUrunSayisi = sepetUrunSayisi)
             }
-        }
+        },
+        containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
         NavHost(
             navController = navController,
@@ -80,7 +82,7 @@ fun MainScreen() {
                     onLogoutClick = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
                     onNavigateToSiparisler = { navController.navigate("toptanci_siparisler") },
                     onNavigateToUrunEkle = { navController.navigate("toptanci_urun_ekle") },
-                    onNavigateToKatalog = { navController.navigate("toptanci_katalog") } // YENİ
+                    onNavigateToKatalog = { navController.navigate("toptanci_katalog") }
                 )
             }
             composable("toptanci_katalog") {
@@ -88,7 +90,6 @@ fun MainScreen() {
                     onBackClick = { navController.popBackStack() }
                 )
             }
-            // YENİ: Toptancı Ürün Ekleme Ekranı Rotası
             composable("toptanci_urun_ekle") {
                 ToptanciUrunEkleScreen(
                     onBackClick = { navController.popBackStack() }
@@ -139,7 +140,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
 
     NavigationBar(
         containerColor = Color.White,
-        tonalElevation = 8.dp
+        tonalElevation = 6.dp
     ) {
         val itemColors = NavigationBarItemDefaults.colors(
             selectedIconColor = Color(0xFF2563EB),
@@ -151,7 +152,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
 
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, contentDescription = "Keşfet") },
-            label = { Text("Keşfet") },
+            label = { Text("Keşfet", fontSize = 11.sp) },
             selected = currentRoute == "home" || (currentRoute?.startsWith("catalog") == true),
             onClick = {
                 navController.navigate("home") {
@@ -164,7 +165,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.List, contentDescription = "Siparişler") },
-            label = { Text("Siparişler") },
+            label = { Text("Siparişler", fontSize = 11.sp) },
             selected = currentRoute == "orders",
             onClick = {
                 navController.navigate("orders") {
@@ -181,7 +182,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
                 BadgedBox(
                     badge = {
                         if (sepetUrunSayisi > 0) {
-                            Badge(containerColor = Color.Red, contentColor = Color.White) {
+                            Badge(containerColor = Color(0xFFEF4444), contentColor = Color.White) {
                                 Text(text = sepetUrunSayisi.toString())
                             }
                         }
@@ -190,7 +191,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
                     Icon(Icons.Default.ShoppingCart, contentDescription = "Sepet")
                 }
             },
-            label = { Text("Sepet") },
+            label = { Text("Sepet", fontSize = 11.sp) },
             selected = currentRoute == "cart",
             onClick = {
                 navController.navigate("cart") {
@@ -204,7 +205,7 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
 
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, contentDescription = "Profil") },
-            label = { Text("Profil") },
+            label = { Text("Profil", fontSize = 11.sp) },
             selected = currentRoute == "profile",
             onClick = {
                 navController.navigate("profile") {
