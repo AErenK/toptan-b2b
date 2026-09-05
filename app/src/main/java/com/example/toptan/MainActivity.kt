@@ -11,8 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.toptan.ui.MainScreen
-import com.example.toptan.ui.SplashScreen
+import com.example.toptan.ui.musteri.MainScreen
+import com.example.toptan.ui.auth.SplashScreen
 import com.example.toptan.ui.theme.ToptanTheme
 
 class MainActivity : ComponentActivity() {

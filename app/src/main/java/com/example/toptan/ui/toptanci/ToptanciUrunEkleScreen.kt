@@ -1,4 +1,4 @@
-package com.example.toptan.ui
+package com.example.toptan.ui.toptanci
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult

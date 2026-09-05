@@ -1,4 +1,4 @@
-package com.example.toptan.ui
+package com.example.toptan.ui.auth
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn

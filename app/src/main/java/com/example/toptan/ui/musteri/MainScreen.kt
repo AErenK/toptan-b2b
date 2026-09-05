@@ -1,4 +1,4 @@
-package com.example.toptan.ui
+package com.example.toptan.ui.musteri
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.padding
@@ -27,6 +27,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.toptan.ui.auth.LoginScreen
+import com.example.toptan.ui.auth.RegisterScreen
+import com.example.toptan.ui.toptanci.ToptanciHomeScreen
+import com.example.toptan.ui.toptanci.ToptanciKatalogScreen
+import com.example.toptan.ui.toptanci.ToptanciSiparisScreen
+import com.example.toptan.ui.toptanci.ToptanciUrunEkleScreen
 import com.example.toptan.viewmodel.CartViewModel
 
 @Composable
@@ -79,7 +85,13 @@ fun MainScreen() {
             }
             composable("toptanci_home") {
                 ToptanciHomeScreen(
-                    onLogoutClick = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
+                    onLogoutClick = {
+                        navController.navigate("login") {
+                            popUpTo(0) {
+                                inclusive = true
+                            }
+                        }
+                    },
                     onNavigateToSiparisler = { navController.navigate("toptanci_siparisler") },
                     onNavigateToUrunEkle = { navController.navigate("toptanci_urun_ekle") },
                     onNavigateToKatalog = { navController.navigate("toptanci_katalog") }

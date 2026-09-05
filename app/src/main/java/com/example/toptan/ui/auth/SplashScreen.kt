@@ -1,4 +1,4 @@
-package com.example.toptan.ui
+package com.example.toptan.ui.auth
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween

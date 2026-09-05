@@ -1,4 +1,4 @@
-package com.example.toptan.ui
+package com.example.toptan.ui.toptanci
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
