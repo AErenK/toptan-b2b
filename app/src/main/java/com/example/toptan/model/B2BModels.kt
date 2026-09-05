@@ -1,6 +1,5 @@
 package com.example.toptan.model
 
-// Toptancıların (Satıcıların) bilgilerini tutan veri modeli
 data class Toptanci(
     val id: String = "",
     val ad: String = "",
@@ -10,7 +9,6 @@ data class Toptanci(
     val onayliMi: Boolean = false
 )
 
-// Toptancıların sattığı ürünlerin veri modeli (Firestore eşleşmesi için varsayılan değerler eklendi)
 data class Urun(
     val id: String = "",
     val toptanciId: String = "",
@@ -19,17 +17,15 @@ data class Urun(
     val minAlimMiktari: Int = 0,
     val stokMiktari: Int = 0,
     val gorselUrl: String = "",
+    val stok: Int = 0,
     val eklenmeTarihi: Long = 0L
 )
 
-// Sepette tutulacak ürünlerin modeli
 data class SepetOgesi(
     val urun: Urun = Urun(),
     var secilenMiktar: Int = 0
 )
 
-// Sipariş geçmişinde görünecek olan veri modeli
-// Sipariş verilerinin Firestore ile eşleşebilmesi için güncellenmiş hali
 data class Siparis(
     val siparisId: String = "",
     val musteriUid: String = "",

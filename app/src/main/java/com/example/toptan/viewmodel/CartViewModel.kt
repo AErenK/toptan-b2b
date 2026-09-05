@@ -3,12 +3,12 @@ package com.example.toptan.viewmodel
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue // YENİ: Atomik işlemler için
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.example.toptan.model.Urun // Kendi modelini import ettik
+import com.example.toptan.model.Urun
 import kotlinx.coroutines.flow.asStateFlow
 
-// Sepet öğesi mantığı (ViewModel içinde kalabilir)
 data class SepetOgesi(val urun: Urun, var secilenMiktar: Int)
 
 class CartViewModel : ViewModel() {
@@ -16,7 +16,7 @@ class CartViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    private val _sepet = MutableStateFlow<List<SepetOgesi>>(emptyList()) // Başlangıçta boş
+    private val _sepet = MutableStateFlow<List<SepetOgesi>>(emptyList())
     val sepet: StateFlow<List<SepetOgesi>> = _sepet
 
     private val _toplamTutar = MutableStateFlow(0.0)
@@ -29,16 +29,25 @@ class CartViewModel : ViewModel() {
 
     // --- KATALOGDAN SEPETE ÜRÜN EKLEME FONKSİYONU ---
     fun sepeteEkle(urun: Urun) {
+        if (urun.stok < urun.minAlimMiktari) {
+            _siparisMesaji.value = "Bu ürün için yeterli stok bulunmuyor."
+            return
+        }
+
         val mevcutListe = _sepet.value.toMutableList()
-        // Ürün sepette zaten var mı kontrol et
         val index = mevcutListe.indexOfFirst { it.urun.id == urun.id }
 
         if (index != -1) {
-            // Varsa, üzerine minimum alım miktarı kadar ekle
             val eskiOge = mevcutListe[index]
-            mevcutListe[index] = eskiOge.copy(secilenMiktar = eskiOge.secilenMiktar + urun.minAlimMiktari)
+            val yeniMiktar = eskiOge.secilenMiktar + urun.minAlimMiktari
+
+            // YENİ: Eklenecek miktar stoğu aşıyor mu kontrolü
+            if (yeniMiktar > urun.stok) {
+                _siparisMesaji.value = "Stok limitine ulaştınız. Daha fazla ekleyemezsiniz."
+            } else {
+                mevcutListe[index] = eskiOge.copy(secilenMiktar = yeniMiktar)
+            }
         } else {
-            // Yoksa, sepet listesine minimum alım miktarıyla yeni öğe olarak ekle
             mevcutListe.add(SepetOgesi(urun, urun.minAlimMiktari))
         }
 
@@ -46,10 +55,17 @@ class CartViewModel : ViewModel() {
         hesaplaToplamTutar()
     }
 
-    // Dikkat: urunId artık Int değil, String (Senin modeline göre)
     fun miktarArtir(urunId: String) {
         _sepet.value = _sepet.value.map {
-            if (it.urun.id == urunId) it.copy(secilenMiktar = it.secilenMiktar + 1) else it
+            if (it.urun.id == urunId) {
+                // YENİ: Artırma işleminde stok sınırı kontrolü
+                if (it.secilenMiktar + 1 <= it.urun.stok) {
+                    it.copy(secilenMiktar = it.secilenMiktar + 1)
+                } else {
+                    _siparisMesaji.value = "Mevcut stok miktarını aşamazsınız!"
+                    it // Değişiklik yapmadan geri döndür
+                }
+            } else it
         }
         hesaplaToplamTutar()
     }
@@ -67,8 +83,7 @@ class CartViewModel : ViewModel() {
         _toplamTutar.value = _sepet.value.sumOf { it.urun.fiyat * it.secilenMiktar }
     }
 
-    // --- FİREBASE SİPARİŞ GÖNDERME ---
-    // --- FİREBASE SİPARİŞ GÖNDERME ---
+    // --- FİREBASE SİPARİŞ GÖNDERME VE OTOMATİK STOK DÜŞME ---
     fun siparisiTamamla(toplamTutar: Double, sepetOzet: String) {
         val aktifKullanici = auth.currentUser
         if (aktifKullanici == null) {
@@ -76,37 +91,52 @@ class CartViewModel : ViewModel() {
             return
         }
 
-        // Sepetteki ilk ürünün toptanciId'sini al (Zaten sepetteki tüm ürünler aynı toptancıya aittir)
         val toptanciId = _sepet.value.firstOrNull()?.urun?.toptanciId
-
         if (toptanciId == null) {
             _siparisMesaji.value = "Hata: Sipariş verilecek toptancı bulunamadı."
             return
         }
 
-        _siparisMesaji.value = "Siparişiniz buluta gönderiliyor..."
+        _siparisMesaji.value = "Siparişiniz işleniyor..."
 
+        // YENİ: BATCH (Toplu İşlem) başlatıyoruz.
+        // Bu sayede sipariş kaydı ve stok düşme işlemleri birbirine bağlanır.
+        val batch = firestore.batch()
+
+        // 1. İşlem: Sipariş belgesini oluştur
         val siparisRef = firestore.collection("siparisler").document()
         val yeniSiparis = hashMapOf(
             "siparisId" to siparisRef.id,
             "musteriUid" to aktifKullanici.uid,
             "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
-            "toptanciId" to toptanciId, // KRİTİK EKLENTİ: Hangi toptancıya gittiği
+            "toptanciId" to toptanciId,
             "siparisOzeti" to sepetOzet,
             "toplamTutar" to toplamTutar,
             "durum" to "Hazırlanıyor",
             "tarih" to System.currentTimeMillis()
         )
+        batch.set(siparisRef, yeniSiparis)
 
-        siparisRef.set(yeniSiparis)
+        // 2. İşlem: Sepetteki her ürünün stok miktarını Firebase'de atomik olarak azalt
+        val mevcutSepet = _sepet.value
+        for (oge in mevcutSepet) {
+            val urunRef = firestore.collection("urunler").document(oge.urun.id)
+            // FieldValue.increment(negatif_değer) kullanarak stoğu anlık düşürürüz
+            batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
+            // Modelinde stokMiktari da olduğu için güvenliğe karşı onu da güncelleyelim:
+            batch.update(urunRef, "stokMiktari", FieldValue.increment(-oge.secilenMiktar.toLong()))
+        }
+
+        // 3. İşlem: Tüm Batch işlemlerini tek seferde veritabanına gönder
+        batch.commit()
             .addOnSuccessListener {
-                _siparisBasarili.value = true // YENİ: Başarılı ekranını tetikler
+                _siparisBasarili.value = true
                 _siparisMesaji.value = "Sipariş Başarıyla Oluşturuldu!"
-                _sepet.value = emptyList() // Sipariş sonrası sepeti temizle
+                _sepet.value = emptyList() // Siparişi verdikten sonra sepeti temizle
                 hesaplaToplamTutar()
             }
             .addOnFailureListener { hata ->
-                _siparisMesaji.value = "Sipariş başarısız oldu: ${hata.message}"
+                _siparisMesaji.value = "Sipariş tamamlanırken hata oluştu: ${hata.message}"
             }
     }
 
@@ -120,7 +150,6 @@ class CartViewModel : ViewModel() {
     }
 
     fun urunuSil(silinecekUrunId: String) {
-        // Listeyi filtreleyip, id'si eşleşmeyenleri (yani silinmeyecekleri) tutuyoruz
         _sepet.value = _sepet.value.filter { it.urun.id != silinecekUrunId }
         hesaplaToplamTutar()
     }
@@ -128,5 +157,4 @@ class CartViewModel : ViewModel() {
     fun siparisBasariliDurumunuSifirla() {
         _siparisBasarili.value = false
     }
-
 }

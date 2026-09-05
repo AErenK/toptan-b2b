@@ -39,7 +39,8 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler")
+            // YENİ: toptanci_urun_ekle sayfası da eklendi, böylece form doldururken alttaki menü kaybolacak
+            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler", "toptanci_urun_ekle")
             if (currentRoute !in gizlenecekEkranlar) {
                 BottomNavigationBar(navController = navController, sepetUrunSayisi = sepetUrunSayisi)
             }
@@ -76,14 +77,21 @@ fun MainScreen() {
             }
             composable("toptanci_home") {
                 ToptanciHomeScreen(
-                    onLogoutClick = {
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onNavigateToSiparisler = {
-                        navController.navigate("toptanci_siparisler")
-                    }
+                    onLogoutClick = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
+                    onNavigateToSiparisler = { navController.navigate("toptanci_siparisler") },
+                    onNavigateToUrunEkle = { navController.navigate("toptanci_urun_ekle") },
+                    onNavigateToKatalog = { navController.navigate("toptanci_katalog") } // YENİ
+                )
+            }
+            composable("toptanci_katalog") {
+                ToptanciKatalogScreen(
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            // YENİ: Toptancı Ürün Ekleme Ekranı Rotası
+            composable("toptanci_urun_ekle") {
+                ToptanciUrunEkleScreen(
+                    onBackClick = { navController.popBackStack() }
                 )
             }
             composable("toptanci_siparisler") {
@@ -91,6 +99,7 @@ fun MainScreen() {
                     onBackClick = { navController.popBackStack() }
                 )
             }
+
             composable("home") {
                 HomeScreen(
                     onNavigateToCatalog = { toptanciId ->
@@ -124,7 +133,7 @@ fun MainScreen() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) { // YENİ: sepetUrunSayisi parametresi eklendi
+fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -167,10 +176,8 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) { //
             colors = itemColors
         )
 
-        // --- SEPET İKONU (ROZETLİ YAPI) ---
         NavigationBarItem(
             icon = {
-                // Material3 BadgedBox bileşeni ile kırmızı baloncuğu ekliyoruz
                 BadgedBox(
                     badge = {
                         if (sepetUrunSayisi > 0) {
