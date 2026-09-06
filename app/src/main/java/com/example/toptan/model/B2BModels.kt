@@ -18,7 +18,8 @@ data class Urun(
     val stokMiktari: Int = 0,
     val gorselUrl: String = "",
     val stok: Int = 0,
-    val eklenmeTarihi: Long = 0L
+    val eklenmeTarihi: Long = 0L,
+    val kategori: String = "Diğer"
 )
 
 data class SepetOgesi(
@@ -35,4 +36,12 @@ data class Siparis(
     val toplamTutar: Double = 0.0,
     val durum: String = "",
     val tarih: Long = 0L
+)
+
+data class Kullanici(
+    val uid: String = "",
+    val ad: String = "",
+    val eposta: String = "",
+    val rol: String = "", // "Musteri" veya "Toptanci"
+    val fcmToken: String = "" // BİLDİRİMLER İÇİN GEREKLİ ALAN
 )

@@ -5,27 +5,27 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.google.firebase.messaging.FirebaseMessaging
 
 class AuthViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance() // Firestore eklendi
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val _mesaj = MutableStateFlow<String?>(null)
     val mesaj: StateFlow<String?> = _mesaj
 
-    // Sadece giriş başarısını değil, kullanıcının rolünü de tutuyoruz ("musteri" veya "toptanci")
     private val _kullaniciRolu = MutableStateFlow<String?>(null)
     val kullaniciRolu: StateFlow<String?> = _kullaniciRolu
 
     init {
-        // Uygulama açıldığında oturum varsa rolünü veritabanından çek
         auth.currentUser?.let { kullanici ->
             roluGetir(kullanici.uid)
+            // Uygulama açıkken oturum varsa token'ı da güncel tutalım
+            fcmTokenGuncelle()
         }
     }
 
-    // Kayıt ol fonksiyonuna 'rol' parametresi eklendi
     fun kayitOl(email: String, sifre: String, rol: String) {
         val temizEmail = email.trim()
         val temizSifre = sifre.trim()
@@ -39,10 +39,9 @@ class AuthViewModel : ViewModel() {
             .addOnSuccessListener { sonuc ->
                 val uid = sonuc.user?.uid
                 if (uid != null) {
-                    // Kullanıcı başarıyla oluştu, şimdi Firestore'a rolünü kaydedelim
                     val kullaniciVerisi = hashMapOf(
                         "email" to temizEmail,
-                        "rol" to rol, // "musteri" veya "toptanci"
+                        "rol" to rol,
                         "kayitTarihi" to System.currentTimeMillis()
                     )
 
@@ -50,6 +49,8 @@ class AuthViewModel : ViewModel() {
                         .addOnSuccessListener {
                             _mesaj.value = "Kayıt başarılı! Yönlendiriliyorsunuz..."
                             _kullaniciRolu.value = rol
+                            // Yeni kayıt olan kullanıcının da token'ını anında kaydet
+                            fcmTokenGuncelle()
                         }
                         .addOnFailureListener {
                             _mesaj.value = "Veritabanı kaydı başarısız oldu."
@@ -74,8 +75,9 @@ class AuthViewModel : ViewModel() {
             .addOnSuccessListener { sonuc ->
                 val uid = sonuc.user?.uid
                 if (uid != null) {
-                    // Giriş başarılı, Firestore'dan kullanıcının rolünü öğren
                     roluGetir(uid)
+                    // Giriş yapan kullanıcının token'ını güncelleyelim ki bildirimler sorunsuz gitsin
+                    fcmTokenGuncelle()
                 }
             }
             .addOnFailureListener { hata ->
@@ -83,22 +85,45 @@ class AuthViewModel : ViewModel() {
             }
     }
 
-    // Firestore'dan rol bilgisini çeken yardımcı fonksiyon
     private fun roluGetir(uid: String) {
         firestore.collection("kullanicilar").document(uid).get()
             .addOnSuccessListener { belge ->
                 if (belge.exists()) {
-                    val rol = belge.getString("rol") ?: "musteri" // Rol yoksa varsayılan müşteri olsun
+                    val rol = belge.getString("rol") ?: "musteri"
                     _mesaj.value = "Giriş başarılı!"
                     _kullaniciRolu.value = rol
                 } else {
                     _mesaj.value = "Kullanıcı profili bulunamadı."
-                    cikisYap() // Güvenlik için profili olmayan hesaptan çıkış yap
+                    cikisYap()
                 }
             }
             .addOnFailureListener {
                 _mesaj.value = "Kullanıcı bilgileri alınamadı."
             }
+    }
+
+    fun fcmTokenGuncelle() {
+        val userId = auth.currentUser?.uid ?: return
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+
+            firestore.collection("kullanicilar").document(userId)
+                .update("fcmToken", token)
+                .addOnSuccessListener {
+                    println("FCM Token güncellendi: $token")
+                }
+                .addOnFailureListener {
+                    // Eğer belgede henüz "fcmToken" alanı yoksa update hata verebilir,
+                    // o yüzden set(..., SetOptions.merge()) ile de destekleyebiliriz:
+                    firestore.collection("kullanicilar").document(userId)
+                        .set(hashMapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
+                }
+        }
     }
 
     fun cikisYap() {

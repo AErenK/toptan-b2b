@@ -26,6 +26,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.viewmodel.AuthViewModel
 import com.example.toptan.viewmodel.ToptanciViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.firestore.SetOptions
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -39,9 +43,6 @@ fun ToptanciHomeScreen(
     onNavigateToUrunEkle: () -> Unit,
     onNavigateToKatalog: () -> Unit
 ) {
-    LaunchedEffect(Unit) {
-        viewModel.istatistikleriGetir()
-    }
 
     val toplamUrun by viewModel.toplamUrunSayisi.collectAsState()
     val bekleyenSiparis by viewModel.bekleyenSiparisSayisi.collectAsState()
@@ -158,7 +159,7 @@ fun ToptanciHomeScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                Divider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // --- 2. HIZLI İŞLEM BUTONLARI (Zarif ve Akıcı Tasarım) ---

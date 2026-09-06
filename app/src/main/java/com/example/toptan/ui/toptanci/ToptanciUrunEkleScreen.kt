@@ -1,4 +1,4 @@
-package com.example.toptan.ui.toptanci
+package com.example.toptan.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -48,13 +48,18 @@ fun ToptanciUrunEkleScreen(
     var stok by remember { mutableStateOf("") }
     var gorselUri by remember { mutableStateOf<Uri?>(null) }
 
+    // Kategori Seçimi İçin State'ler
+    var expanded by remember { mutableStateOf(false) }
+    var secilenKategori by remember { mutableStateOf("Gıda") }
+    val kategoriler = listOf("Gıda", "İçecek", "Temizlik", "Kozmetik", "Kırtasiye", "Teknoloji", "Diğer")
+
     val mesaj by viewModel.mesaj.collectAsState()
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> gorselUri = uri }
 
     LaunchedEffect(mesaj) {
         if (mesaj?.contains("başarıyla") == true) {
             delay(2000)
-            urunAdi = ""; fiyat = ""; minAlim = ""; stok = ""; gorselUri = null
+            urunAdi = ""; fiyat = ""; minAlim = ""; stok = ""; gorselUri = null; secilenKategori = "Gıda"
             viewModel.mesajiTemizle()
             onBackClick()
         } else if (mesaj != null) {
@@ -68,30 +73,15 @@ fun ToptanciUrunEkleScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(
-                            text = "Yeni Ürün Yükle",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color(0xFF1E293B)
-                        )
-                        Text(
-                            text = "Kataloğa toptan ürün ekleme formu",
-                            fontSize = 11.sp,
-                            color = Color(0xFF64748B),
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text("Yeni Ürün Yükle", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B))
+                        Text("Kataloğa toptan ürün ekleme formu", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
                     }
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = onBackClick,
-                        modifier = Modifier
-                            .padding(start = 4.dp)
-                            .size(38.dp)
-                            .background(Color(0xFFF1F5F9), shape = CircleShape)
-                    ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B), modifier = Modifier.size(18.dp))
-                    }
+                        modifier = Modifier.padding(start = 4.dp).size(38.dp).background(Color(0xFFF1F5F9), shape = CircleShape)
+                    ) { Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B), modifier = Modifier.size(18.dp)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
             )
@@ -100,200 +90,112 @@ fun ToptanciUrunEkleScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // Arka plana hafif tasarım derinliği (Degrade)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color(0xFF2563EB).copy(alpha = 0.04f), Color.Transparent)
-                        )
-                    )
-            )
+            Box(modifier = Modifier.fillMaxWidth().height(180.dp).background(Brush.verticalGradient(colors = listOf(Color(0xFF2563EB).copy(alpha = 0.04f), Color.Transparent))))
 
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Görsel Seçim Alanı (Daha Modern ve Şık)
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
-                        .clickable { galleryLauncher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { galleryLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
                     if (gorselUri != null) {
-                        AsyncImage(
-                            model = gorselUri,
-                            contentDescription = "Görsel",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+                        AsyncImage(model = gorselUri, contentDescription = "Görsel", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .background(Color(0xFFF1F5F9), shape = CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Image,
-                                    contentDescription = "Seç",
-                                    tint = Color(0xFF2563EB),
-                                    modifier = Modifier.size(26.dp)
-                                )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Box(modifier = Modifier.size(54.dp).background(Color(0xFFF1F5F9), shape = CircleShape), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Image, contentDescription = "Seç", tint = Color(0xFF2563EB), modifier = Modifier.size(26.dp))
                             }
                             Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                "Ürün Fotoğrafı Eklemek İçin Dokunun",
-                                color = Color(0xFF1E293B),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp
-                            )
+                            Text("Ürün Fotoğrafı Eklemek İçin Dokunun", color = Color(0xFF1E293B), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                "PNG veya JPG formatında",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp
-                            )
+                            Text("PNG veya JPG formatında", color = Color(0xFF94A3B8), fontSize = 11.sp)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Ürün Adı Giriş Alanı
                 OutlinedTextField(
-                    value = urunAdi,
-                    onValueChange = { urunAdi = it },
-                    label = { Text("Ürün Adı", color = Color(0xFF64748B)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2563EB),
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    singleLine = true
+                    value = urunAdi, onValueChange = { urunAdi = it }, label = { Text("Ürün Adı", color = Color(0xFF64748B)) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White), singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Fiyat Giriş Alanı
-                OutlinedTextField(
-                    value = fiyat,
-                    onValueChange = { fiyat = it },
-                    label = { Text("Fiyat (₺)", color = Color(0xFF64748B)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2563EB),
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Min Alım ve Stok Alanları (Yan Yana)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                // YENİ: Şık Kategori Seçici
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = minAlim,
-                        onValueChange = { minAlim = it },
-                        label = { Text("Min. Alım Miktarı", color = Color(0xFF64748B)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
+                        value = secilenKategori,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Kategori", color = Color(0xFF64748B)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF2563EB),
-                            unfocusedBorderColor = Color(0xFFE2E8F0),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        singleLine = true
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        kategoriler.forEach { kategori ->
+                            DropdownMenuItem(
+                                text = { Text(kategori, color = Color(0xFF1E293B)) },
+                                onClick = {
+                                    secilenKategori = kategori
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = fiyat, onValueChange = { fiyat = it }, label = { Text("Fiyat (₺)", color = Color(0xFF64748B)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White), singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    OutlinedTextField(
+                        value = minAlim, onValueChange = { minAlim = it }, label = { Text("Min. Alım", color = Color(0xFF64748B)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White), singleLine = true
                     )
                     OutlinedTextField(
-                        value = stok,
-                        onValueChange = { stok = it },
-                        label = { Text("Mevcut Stok", color = Color(0xFF64748B)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF2563EB),
-                            unfocusedBorderColor = Color(0xFFE2E8F0),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        singleLine = true
+                        value = stok, onValueChange = { stok = it }, label = { Text("Stok", color = Color(0xFF64748B)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White), singleLine = true
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bildirim Mesajı Animasyonu
-                AnimatedVisibility(
-                    visible = !mesaj.isNullOrEmpty(),
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (mesaj.orEmpty().contains("başarıyla")) Color(0xFFDCFCE7) else Color(0xFFFEF2F2)
-                    ) {
-                        Text(
-                            text = mesaj ?: "",
-                            color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF16A34A) else Color(0xFFEF4444),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
+                AnimatedVisibility(visible = !mesaj.isNullOrEmpty(), enter = fadeIn(), exit = fadeOut()) {
+                    Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = if (mesaj.orEmpty().contains("başarıyla")) Color(0xFFDCFCE7) else Color(0xFFFEF2F2)) {
+                        Text(text = mesaj ?: "", color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF16A34A) else Color(0xFFEF4444), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(12.dp), textAlign = TextAlign.Center)
                     }
                 }
 
-                if (!mesaj.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+                if (!mesaj.isNullOrEmpty()) Spacer(modifier = Modifier.height(16.dp))
 
-                // Kataloğa Ekle Butonu
                 Button(
-                    onClick = { viewModel.urunEkle(urunAdi, fiyat, minAlim, stok, gorselUri) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    onClick = { viewModel.urunEkle(urunAdi, fiyat, minAlim, stok, secilenKategori, gorselUri) }, // YENİ: secilenKategori eklendi
+                    modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)), shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Default.AddCircle, contentDescription = "Ekle", tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))

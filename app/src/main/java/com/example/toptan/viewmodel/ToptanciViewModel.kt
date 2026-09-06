@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import com.example.toptan.model.Urun
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
 class ToptanciViewModel : ViewModel() {
@@ -17,7 +20,10 @@ class ToptanciViewModel : ViewModel() {
     private val storage = FirebaseStorage.getInstance()
 
     private val _mesaj = MutableStateFlow<String?>(null)
-    val mesaj: StateFlow<String?> = _mesaj
+    val mesaj: StateFlow<String?> = _mesaj.asStateFlow()
+
+    private val _yukleniyor = MutableStateFlow(false)
+    val yukleniyor: StateFlow<Boolean> = _yukleniyor.asStateFlow()
 
     // İstatistik Değişkenleri
     private val _toplamUrunSayisi = MutableStateFlow(0)
@@ -29,9 +35,30 @@ class ToptanciViewModel : ViewModel() {
     private val _toplamCiro = MutableStateFlow(0.0)
     val toplamCiro: StateFlow<Double> = _toplamCiro
 
-    // --- YENİ: Toptancının kendi ürünlerini tutan liste ---
+    // Toptancının kendi ürünlerini tutan liste
     private val _toptanciUrunleri = MutableStateFlow<List<Urun>>(emptyList())
     val toptanciUrunleri: StateFlow<List<Urun>> = _toptanciUrunleri
+
+    // EKRAN AÇILDIĞINDA OTOMATİK ÇALIŞACAK KISIM
+    init {
+        istatistikleriGetir()
+        fcmTokenKaydet()
+    }
+
+    private fun fcmTokenKaydet() {
+        val userId = auth.currentUser?.uid ?: return
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                val data = hashMapOf("fcmToken" to token)
+
+                // Firestore'da kullanicilar koleksiyonuna token'ı yazıyoruz
+                firestore.collection("kullanicilar").document(userId)
+                    .set(data, SetOptions.merge())
+            }
+        }
+    }
 
     fun istatistikleriGetir() {
         val toptanciId = auth.currentUser?.uid ?: return
@@ -57,7 +84,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // --- YENİ: Toptancının Ürünlerini Getiren Fonksiyon ---
     fun toptanciUrunleriniGetir() {
         val toptanciId = auth.currentUser?.uid ?: return
 
@@ -71,7 +97,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // --- YENİ: Ürün Silme Fonksiyonu ---
     fun urunSil(urunId: String) {
         firestore.collection("urunler").document(urunId).delete()
             .addOnSuccessListener {
@@ -82,7 +107,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // --- YENİ: Fiyat Güncelleme Fonksiyonu ---
     fun fiyatGuncelle(urunId: String, yeniFiyat: Double) {
         firestore.collection("urunler").document(urunId).update("fiyat", yeniFiyat)
             .addOnSuccessListener {
@@ -93,8 +117,8 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // Ürün Ekleme (Mevcut Kodlar)
-    fun urunEkle(urunAdi: String, fiyatStr: String, minAlimStr: String, stokStr: String, gorselUri: Uri?) {
+    // Ürün Ekleme (Storage Entegrasyonlu)
+    fun urunEkle(urunAdi: String, fiyatStr: String, minAlimStr: String, stokStr: String, kategori: String, gorselUri: Uri?) {
         val fiyat = fiyatStr.toDoubleOrNull()
         val minAlim = minAlimStr.toIntOrNull()
         val stok = stokStr.toIntOrNull()
@@ -110,6 +134,8 @@ class ToptanciViewModel : ViewModel() {
             return
         }
 
+        _yukleniyor.value = true
+
         if (gorselUri != null) {
             _mesaj.value = "Fotoğraf yükleniyor, lütfen bekleyin..."
             val dosyaYolu = storage.reference.child("urun_gorselleri/${UUID.randomUUID()}.jpg")
@@ -117,18 +143,19 @@ class ToptanciViewModel : ViewModel() {
             dosyaYolu.putFile(gorselUri)
                 .addOnSuccessListener {
                     dosyaYolu.downloadUrl.addOnSuccessListener { uri ->
-                        firestoreKaydet(toptanciId, urunAdi, fiyat, minAlim, stok, uri.toString())
+                        firestoreKaydet(toptanciId, urunAdi, fiyat, minAlim, stok, kategori, uri.toString())
                     }
                 }
                 .addOnFailureListener {
+                    _yukleniyor.value = false
                     _mesaj.value = "Fotoğraf yüklenirken hata oluştu."
                 }
         } else {
-            firestoreKaydet(toptanciId, urunAdi, fiyat, minAlim, stok, "")
+            firestoreKaydet(toptanciId, urunAdi, fiyat, minAlim, stok, kategori, "")
         }
     }
 
-    private fun firestoreKaydet(toptanciId: String, ad: String, fiyat: Double, minAlim: Int, stok: Int, gorselUrl: String) {
+    private fun firestoreKaydet(toptanciId: String, ad: String, fiyat: Double, minAlim: Int, stok: Int, kategori: String, gorselUrl: String) {
         val yeniUrunRef = firestore.collection("urunler").document()
         val urun = hashMapOf(
             "id" to yeniUrunRef.id,
@@ -137,13 +164,20 @@ class ToptanciViewModel : ViewModel() {
             "fiyat" to fiyat,
             "minAlimMiktari" to minAlim,
             "stok" to stok,
-            "stokMiktari" to stok, // Modelindeki diğer alan
+            "kategori" to kategori,
             "gorselUrl" to gorselUrl,
-            "eklenmeTarihi" to System.currentTimeMillis() // YENİ EKLENEN SATIR BURASI!
+            "eklenmeTarihi" to System.currentTimeMillis()
         )
+
         yeniUrunRef.set(urun)
-            .addOnSuccessListener { _mesaj.value = "Ürün başarıyla eklendi!" }
-            .addOnFailureListener { hata -> _mesaj.value = "Ürün eklenirken bir hata oluştu: ${hata.message}" }
+            .addOnSuccessListener {
+                _yukleniyor.value = false
+                _mesaj.value = "Ürün başarıyla eklendi!"
+            }
+            .addOnFailureListener { hata ->
+                _yukleniyor.value = false
+                _mesaj.value = "Ürün eklenirken bir hata oluştu: ${hata.message}"
+            }
     }
 
     fun mesajiTemizle() {

@@ -27,12 +27,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.toptan.ui.ToptanciUrunEkleScreen
 import com.example.toptan.ui.auth.LoginScreen
 import com.example.toptan.ui.auth.RegisterScreen
 import com.example.toptan.ui.toptanci.ToptanciHomeScreen
 import com.example.toptan.ui.toptanci.ToptanciKatalogScreen
 import com.example.toptan.ui.toptanci.ToptanciSiparisScreen
-import com.example.toptan.ui.toptanci.ToptanciUrunEkleScreen
 import com.example.toptan.viewmodel.CartViewModel
 
 @Composable

@@ -3,9 +3,13 @@ package com.example.toptan.ui.musteri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,9 +62,17 @@ fun CatalogScreen(
 
     var aramaMetni by remember { mutableStateOf("") }
 
-    val filtrelenmisUrunler = remember(urunler, aramaMetni) {
-        if (aramaMetni.isBlank()) urunler
-        else urunler.filter { it.ad.contains(aramaMetni, ignoreCase = true) }
+    // YENİ: Kategori State'leri
+    var seciliKategori by remember { mutableStateOf("Tümü") }
+    val kategoriler = listOf("Tümü", "Gıda", "İçecek", "Temizlik", "Kozmetik", "Kırtasiye", "Teknoloji", "Diğer")
+
+    // GÜNCELLENDİ: Hem arama metnine hem de seçili kategoriye göre filtreleme
+    val filtrelenmisUrunler = remember(urunler, aramaMetni, seciliKategori) {
+        urunler.filter { urun ->
+            val kategoriUygun = if (seciliKategori == "Tümü") true else urun.kategori == seciliKategori
+            val aramaUygun = if (aramaMetni.isBlank()) true else urun.ad.contains(aramaMetni, ignoreCase = true)
+            kategoriUygun && aramaUygun
+        }
     }
 
     Scaffold(
@@ -75,7 +87,7 @@ fun CatalogScreen(
                             color = Color(0xFF1E293B)
                         )
                         Text(
-                            text = "${urunler.size} ürün listeleniyor",
+                            text = "${filtrelenmisUrunler.size} ürün listeleniyor", // Dinamik sayı
                             fontSize = 11.sp,
                             color = Color(0xFF64748B),
                             fontWeight = FontWeight.Medium
@@ -94,7 +106,6 @@ fun CatalogScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // Hafif Üst Gradyan Efekti
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -108,7 +119,7 @@ fun CatalogScreen(
 
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // ŞIK VE AKICI ARAMA ÇUBUĞU
+                // ARAMA ÇUBUĞU
                 OutlinedTextField(
                     value = aramaMetni,
                     onValueChange = { aramaMetni = it },
@@ -116,7 +127,7 @@ fun CatalogScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .height(54.dp),
-                    placeholder = { Text("Kataloğda ürün ara...", color = Color(0xFF94A3B8), fontSize = 14.sp) },
+                    placeholder = { Text("Katalogda ürün ara...", color = Color(0xFF94A3B8), fontSize = 14.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Ara", tint = Color(0xFF64748B)) },
                     trailingIcon = {
                         AnimatedVisibility(
@@ -139,7 +150,22 @@ fun CatalogScreen(
                     singleLine = true
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                // YENİ: YATAY KATEGORİ FİLTRELERİ
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(kategoriler) { kategori ->
+                        KategoriCip(
+                            kategori = kategori,
+                            seciliMi = seciliKategori == kategori,
+                            onClick = { seciliKategori = kategori }
+                        )
+                    }
+                }
 
                 when {
                     yukleniyor -> {
@@ -194,6 +220,30 @@ fun CatalogScreen(
     }
 }
 
+// YENİ: Kategori Çipi Bileşeni
+@Composable
+fun KategoriCip(kategori: String, seciliMi: Boolean, onClick: () -> Unit) {
+    val arkaPlanRengi = if (seciliMi) Color(0xFF2563EB) else Color.White
+    val metinRengi = if (seciliMi) Color.White else Color(0xFF64748B)
+    val borderRengi = if (seciliMi) Color.Transparent else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = Modifier.clickable { onClick() },
+        shape = CircleShape,
+        color = arkaPlanRengi,
+        border = if (!seciliMi) BorderStroke(1.dp, borderRengi) else null,
+        shadowElevation = if (seciliMi) 2.dp else 0.dp // DEĞİŞİKLİK BURADA
+    ) {
+        Text(
+            text = kategori,
+            color = metinRengi,
+            fontWeight = if (seciliMi) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
 @Composable
 fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
     val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(urun.fiyat)
@@ -210,7 +260,6 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Şık Görsel Alanı
             Box(
                 modifier = Modifier
                     .size(88.dp)
@@ -237,8 +286,18 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Ürün Detayları ve Aksiyon Butonu
             Column(modifier = Modifier.weight(1f)) {
+                // YENİ: Şık kategori etiketi
+                Text(
+                    text = urun.kategori.uppercase(Locale("tr", "TR")),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF2563EB),
+                    letterSpacing = 0.5.sp
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
                 Text(
                     text = urun.ad,
                     fontWeight = FontWeight.Bold,
@@ -268,7 +327,6 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Sepete Ekle Butonu
                 Button(
                     onClick = onAddToCartClick,
                     shape = RoundedCornerShape(12.dp),
