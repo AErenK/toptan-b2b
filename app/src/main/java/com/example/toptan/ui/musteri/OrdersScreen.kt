@@ -66,7 +66,6 @@ fun OrdersScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // Arka plana hafif tasarım derinliği (Degrade)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,7 +82,6 @@ fun OrdersScreen(
                     CircularProgressIndicator(color = Color(0xFF2563EB))
                 }
             } else if (siparisler.isEmpty()) {
-                // Şık Boş Durum Tasarımı
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -132,11 +130,10 @@ fun OrdersScreen(
 
 @Composable
 fun MusteriSiparisKarti(siparis: Siparis) {
-    val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(siparis.toplamTutar)
-    val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("tr"))
+    val formatliTutar = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(siparis.toplamTutar)
+    val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR"))
     val tarihTemsili = tarihFormat.format(Date(siparis.tarih))
 
-    // Duruma göre profesyonel renkler, arka planlar ve ikonlar
     val (durumRengi, arkaPlanRenk, durumIkonu) = when (siparis.durum) {
         "Hazırlanıyor" -> Triple(Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.Schedule)
         "Yola Çıktı" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), Icons.Default.LocalShipping)
@@ -151,7 +148,6 @@ fun MusteriSiparisKarti(siparis: Siparis) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Üst Kısım: Tarih ve Durum Etiketi
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,10 +184,9 @@ fun MusteriSiparisKarti(siparis: Siparis) {
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Orta Kısım: Sipariş Özeti
             Text(
                 text = "Sipariş İçeriği",
                 fontSize = 11.sp,
@@ -208,7 +203,6 @@ fun MusteriSiparisKarti(siparis: Siparis) {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Alt Kısım: Toplam Tutar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

@@ -51,7 +51,8 @@ fun CatalogScreen(
     toptanciId: String,
     cartViewModel: CartViewModel,
     catalogViewModel: CatalogViewModel = viewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onUrunClick: (String) -> Unit
 ) {
     LaunchedEffect(toptanciId) {
         catalogViewModel.urunleriGetir(toptanciId)
@@ -61,12 +62,9 @@ fun CatalogScreen(
     val yukleniyor by catalogViewModel.yukleniyor.collectAsState()
 
     var aramaMetni by remember { mutableStateOf("") }
-
-    // YENİ: Kategori State'leri
     var seciliKategori by remember { mutableStateOf("Tümü") }
     val kategoriler = listOf("Tümü", "Gıda", "İçecek", "Temizlik", "Kozmetik", "Kırtasiye", "Teknoloji", "Diğer")
 
-    // GÜNCELLENDİ: Hem arama metnine hem de seçili kategoriye göre filtreleme
     val filtrelenmisUrunler = remember(urunler, aramaMetni, seciliKategori) {
         urunler.filter { urun ->
             val kategoriUygun = if (seciliKategori == "Tümü") true else urun.kategori == seciliKategori
@@ -87,7 +85,7 @@ fun CatalogScreen(
                             color = Color(0xFF1E293B)
                         )
                         Text(
-                            text = "${filtrelenmisUrunler.size} ürün listeleniyor", // Dinamik sayı
+                            text = "${filtrelenmisUrunler.size} ürün listeleniyor",
                             fontSize = 11.sp,
                             color = Color(0xFF64748B),
                             fontWeight = FontWeight.Medium
@@ -105,7 +103,6 @@ fun CatalogScreen(
         containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,8 +115,6 @@ fun CatalogScreen(
             )
 
             Column(modifier = Modifier.fillMaxSize()) {
-
-                // ARAMA ÇUBUĞU
                 OutlinedTextField(
                     value = aramaMetni,
                     onValueChange = { aramaMetni = it },
@@ -150,7 +145,6 @@ fun CatalogScreen(
                     singleLine = true
                 )
 
-                // YENİ: YATAY KATEGORİ FİLTRELERİ
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -209,7 +203,8 @@ fun CatalogScreen(
                             items(filtrelenmisUrunler.size) { index ->
                                 CatalogItemCard(
                                     urun = filtrelenmisUrunler[index],
-                                    onAddToCartClick = { cartViewModel.sepeteEkle(filtrelenmisUrunler[index]) }
+                                    onAddToCartClick = { cartViewModel.sepeteEkle(filtrelenmisUrunler[index]) },
+                                    onCardClick = { onUrunClick(filtrelenmisUrunler[index].id) }
                                 )
                             }
                         }
@@ -220,7 +215,6 @@ fun CatalogScreen(
     }
 }
 
-// YENİ: Kategori Çipi Bileşeni
 @Composable
 fun KategoriCip(kategori: String, seciliMi: Boolean, onClick: () -> Unit) {
     val arkaPlanRengi = if (seciliMi) Color(0xFF2563EB) else Color.White
@@ -232,7 +226,7 @@ fun KategoriCip(kategori: String, seciliMi: Boolean, onClick: () -> Unit) {
         shape = CircleShape,
         color = arkaPlanRengi,
         border = if (!seciliMi) BorderStroke(1.dp, borderRengi) else null,
-        shadowElevation = if (seciliMi) 2.dp else 0.dp // DEĞİŞİKLİK BURADA
+        shadowElevation = if (seciliMi) 2.dp else 0.dp
     ) {
         Text(
             text = kategori,
@@ -245,11 +239,13 @@ fun KategoriCip(kategori: String, seciliMi: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
-    val formatliFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(urun.fiyat)
+fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit, onCardClick: () -> Unit) {
+    val formatliFiyat = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(urun.fiyat)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+                .clickable { onCardClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -287,9 +283,8 @@ fun CatalogItemCard(urun: Urun, onAddToCartClick: () -> Unit) {
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // YENİ: Şık kategori etiketi
                 Text(
-                    text = urun.kategori.uppercase(Locale("tr", "TR")),
+                    text = urun.kategori.uppercase(Locale.forLanguageTag("tr-TR")),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFF2563EB),

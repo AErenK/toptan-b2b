@@ -195,7 +195,7 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
                             items = sepetListesi,
                             key = { oge -> oge.urun.id }
                         ) { oge ->
-                            val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(oge.urun.fiyat)
+                            val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(oge.urun.fiyat)
 
                             CartItemCard(
                                 productName = oge.urun.ad,

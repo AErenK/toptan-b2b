@@ -1,5 +1,7 @@
 package com.example.toptan.ui.toptanci
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.model.Siparis
+import com.example.toptan.utils.createPdf // Kendi paket adına göre değiştir!
 import com.example.toptan.viewmodel.ToptanciSiparisViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -38,6 +43,16 @@ fun ToptanciSiparisScreen(
 ) {
     val siparisler by viewModel.gelenSiparisler.collectAsState()
     val yukleniyor by viewModel.yukleniyor.collectAsState()
+    val context = LocalContext.current
+
+    // PDF Kaydetme Penceresini Tetikleyen Launcher
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri != null) {
+            createPdf(context, uri, siparisler)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -71,6 +86,24 @@ fun ToptanciSiparisScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B), modifier = Modifier.size(18.dp))
                     }
                 },
+                actions = {
+                    // YENİ: PDF İndirme Butonu
+                    if (siparisler.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                // PDF'e varsayılan bir isim vererek dosya kaydetme penceresini açıyoruz
+                                val defaultFileName = "Siparis_Raporu_${System.currentTimeMillis()}.pdf"
+                                pdfLauncher.launch(defaultFileName)
+                            },
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(38.dp)
+                                .background(Color(0xFFDBEAFE), shape = CircleShape)
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Çıktısı Al", tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
             )
         },
@@ -78,7 +111,6 @@ fun ToptanciSiparisScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // Arka plana hafif tasarım derinliği (Degrade)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,8 +183,8 @@ fun SiparisKarti(
     siparis: Siparis,
     onDurumDegistir: (String, String) -> Unit
 ) {
-    val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(siparis.toplamTutar)
-    val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("tr"))
+    val formatliTutar = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(siparis.toplamTutar)
+    val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR"))
     val tarihTemsili = tarihFormat.format(Date(siparis.tarih))
 
     val (durumRengi, arkaPlanRenk) = when (siparis.durum) {
@@ -168,7 +200,6 @@ fun SiparisKarti(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Üst Kısım: Müşteri Bilgisi ve Tarih
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -190,10 +221,9 @@ fun SiparisKarti(
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Orta Kısım: Sipariş Özeti
             Text(
                 text = "Sipariş İçeriği",
                 fontSize = 11.sp,
@@ -210,7 +240,6 @@ fun SiparisKarti(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Alt Kısım: Toplam Tutar ve Durum Rozeti
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -255,7 +284,6 @@ fun SiparisKarti(
                 }
             }
 
-            // Aksiyon Butonları
             if (siparis.durum == "Hazırlanıyor") {
                 Spacer(modifier = Modifier.height(14.dp))
                 Button(

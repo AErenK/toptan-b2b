@@ -125,20 +125,36 @@ fun MainScreen() {
                 CatalogScreen(
                     toptanciId = tiklananToptanciId,
                     cartViewModel = sharedCartViewModel,
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onUrunClick = { urunId ->
+                        navController.navigate("product_detail/$urunId")
+                    }
                 )
             }
             composable("orders") { OrdersScreen() }
             composable("cart") {
                 CartScreen(viewModel = sharedCartViewModel)
             }
+            // PROFİL EKRANI
             composable("profile") {
                 ProfileScreen(
                     onLogoutClick = {
+                        // Çıkış işlemi ProfileScreen içinde yapılıyor, biz sadece Login'e atıyoruz
                         navController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToSiparislerim = {
+                        navController.navigate("orders") // Senin geçmiş siparişler rotan "siparislerim" ise buraya onu yaz
                     }
+                )
+            }
+            composable("product_detail/{urunId}") { backStackEntry ->
+                val urunId = backStackEntry.arguments?.getString("urunId") ?: ""
+                ProductDetailScreen(
+                    urunId = urunId,
+                    cartViewModel = sharedCartViewModel,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }

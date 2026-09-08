@@ -3,7 +3,7 @@ package com.example.toptan.viewmodel
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue // YENİ: Atomik işlemler için
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.toptan.model.Urun
@@ -29,19 +29,29 @@ class CartViewModel : ViewModel() {
 
     // --- KATALOGDAN SEPETE ÜRÜN EKLEME FONKSİYONU ---
     fun sepeteEkle(urun: Urun) {
+        val mevcutListe = _sepet.value.toMutableList()
+
+        // 1. GÜVENLİK: FARKLI TOPTANCI KONTROLÜ
+        if (mevcutListe.isNotEmpty()) {
+            val sepettekiToptanciId = mevcutListe.first().urun.toptanciId
+            if (urun.toptanciId != sepettekiToptanciId) {
+                _siparisMesaji.value = "Sepetinizde farklı bir toptancıya ait ürün var. Lütfen önce mevcut sepetinizi temizleyin."
+                return
+            }
+        }
+
+        // 2. GÜVENLİK: MİNİMUM ALIM VE STOK KONTROLÜ
         if (urun.stok < urun.minAlimMiktari) {
             _siparisMesaji.value = "Bu ürün için yeterli stok bulunmuyor."
             return
         }
 
-        val mevcutListe = _sepet.value.toMutableList()
         val index = mevcutListe.indexOfFirst { it.urun.id == urun.id }
 
         if (index != -1) {
             val eskiOge = mevcutListe[index]
             val yeniMiktar = eskiOge.secilenMiktar + urun.minAlimMiktari
 
-            // YENİ: Eklenecek miktar stoğu aşıyor mu kontrolü
             if (yeniMiktar > urun.stok) {
                 _siparisMesaji.value = "Stok limitine ulaştınız. Daha fazla ekleyemezsiniz."
             } else {
@@ -58,12 +68,11 @@ class CartViewModel : ViewModel() {
     fun miktarArtir(urunId: String) {
         _sepet.value = _sepet.value.map {
             if (it.urun.id == urunId) {
-                // YENİ: Artırma işleminde stok sınırı kontrolü
                 if (it.secilenMiktar + 1 <= it.urun.stok) {
                     it.copy(secilenMiktar = it.secilenMiktar + 1)
                 } else {
                     _siparisMesaji.value = "Mevcut stok miktarını aşamazsınız!"
-                    it // Değişiklik yapmadan geri döndür
+                    it
                 }
             } else it
         }
@@ -83,7 +92,6 @@ class CartViewModel : ViewModel() {
         _toplamTutar.value = _sepet.value.sumOf { it.urun.fiyat * it.secilenMiktar }
     }
 
-    // --- FİREBASE SİPARİŞ GÖNDERME VE OTOMATİK STOK DÜŞME ---
     fun siparisiTamamla(toplamTutar: Double, sepetOzet: String) {
         val aktifKullanici = auth.currentUser
         if (aktifKullanici == null) {
@@ -97,47 +105,70 @@ class CartViewModel : ViewModel() {
             return
         }
 
-        _siparisMesaji.value = "Siparişiniz işleniyor..."
+        _siparisMesaji.value = "Cari limitiniz kontrol ediliyor..."
 
-        // YENİ: BATCH (Toplu İşlem) başlatıyoruz.
-        // Bu sayede sipariş kaydı ve stok düşme işlemleri birbirine bağlanır.
-        val batch = firestore.batch()
+        val kullaniciRef = firestore.collection("kullanicilar").document(aktifKullanici.uid)
 
-        // 1. İşlem: Sipariş belgesini oluştur
-        val siparisRef = firestore.collection("siparisler").document()
-        val yeniSiparis = hashMapOf(
-            "siparisId" to siparisRef.id,
-            "musteriUid" to aktifKullanici.uid,
-            "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
-            "toptanciId" to toptanciId,
-            "siparisOzeti" to sepetOzet,
-            "toplamTutar" to toplamTutar,
-            "durum" to "Hazırlanıyor",
-            "tarih" to System.currentTimeMillis()
-        )
-        batch.set(siparisRef, yeniSiparis)
+        kullaniciRef.get().addOnSuccessListener { snapshot ->
+            // Kullanıcının limiti var mı bak, yoksa 50.000 TL tanımla (Gerçek B2B'de bunu Toptancı belirler)
+            val mevcutLimit = if (snapshot.exists() && snapshot.contains("cariLimit")) {
+                snapshot.getDouble("cariLimit") ?: 50000.0
+            } else {
+                50000.0
+            }
 
-        // 2. İşlem: Sepetteki her ürünün stok miktarını Firebase'de atomik olarak azalt
-        val mevcutSepet = _sepet.value
-        for (oge in mevcutSepet) {
-            val urunRef = firestore.collection("urunler").document(oge.urun.id)
-            // FieldValue.increment(negatif_değer) kullanarak stoğu anlık düşürürüz
-            batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
-            // Modelinde stokMiktari da olduğu için güvenliğe karşı onu da güncelleyelim:
-            batch.update(urunRef, "stokMiktari", FieldValue.increment(-oge.secilenMiktar.toLong()))
+            // LİMİT KONTROLÜ
+            if (toplamTutar > mevcutLimit) {
+                _siparisMesaji.value = "Hata: Cari limitiniz yetersiz! (Kalan Limit: ${mevcutLimit} ₺)"
+                return@addOnSuccessListener
+            }
+
+            _siparisMesaji.value = "Siparişiniz işleniyor..."
+            val batch = firestore.batch()
+
+            // 1. İşlem: Müşterinin cari limitinden tutarı düş
+            batch.update(kullaniciRef, "cariLimit", FieldValue.increment(-toplamTutar))
+
+            // Eğer veritabanında daha önce cariLimit açılmadıysa set ile oluştur
+            if (!snapshot.exists() || !snapshot.contains("cariLimit")) {
+                batch.set(kullaniciRef, hashMapOf("cariLimit" to (50000.0 - toplamTutar)), com.google.firebase.firestore.SetOptions.merge())
+            }
+
+            // 2. İşlem: Sipariş belgesini oluştur
+            val siparisRef = firestore.collection("siparisler").document()
+            val yeniSiparis = hashMapOf(
+                "siparisId" to siparisRef.id,
+                "musteriUid" to aktifKullanici.uid,
+                "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
+                "toptanciId" to toptanciId,
+                "siparisOzeti" to sepetOzet,
+                "toplamTutar" to toplamTutar,
+                "durum" to "Hazırlanıyor",
+                "tarih" to System.currentTimeMillis()
+            )
+            batch.set(siparisRef, yeniSiparis)
+
+            // 3. İşlem: Stokları Düş
+            for (oge in _sepet.value) {
+                val urunRef = firestore.collection("urunler").document(oge.urun.id)
+                batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
+                batch.update(urunRef, "stokMiktari", FieldValue.increment(-oge.secilenMiktar.toLong())) // Yedek stok alanın varsa
+            }
+
+            // İşlemleri Ateşle
+            batch.commit()
+                .addOnSuccessListener {
+                    _siparisBasarili.value = true
+                    _siparisMesaji.value = "Siparişiniz Açık Hesabınıza (Cari) işlenerek onaylandı!"
+                    _sepet.value = emptyList()
+                    hesaplaToplamTutar()
+                }
+                .addOnFailureListener { hata ->
+                    _siparisMesaji.value = "Sipariş tamamlanırken hata oluştu: ${hata.message}"
+                }
+        }.addOnFailureListener {
+            _siparisMesaji.value = "Kullanıcı bilgileri alınamadı."
         }
-
-        // 3. İşlem: Tüm Batch işlemlerini tek seferde veritabanına gönder
-        batch.commit()
-            .addOnSuccessListener {
-                _siparisBasarili.value = true
-                _siparisMesaji.value = "Sipariş Başarıyla Oluşturuldu!"
-                _sepet.value = emptyList() // Siparişi verdikten sonra sepeti temizle
-                hesaplaToplamTutar()
-            }
-            .addOnFailureListener { hata ->
-                _siparisMesaji.value = "Sipariş tamamlanırken hata oluştu: ${hata.message}"
-            }
     }
 
     fun mesajiTemizle() {
