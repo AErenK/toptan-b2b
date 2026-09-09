@@ -54,10 +54,8 @@ fun createPdf(context: Context, uri: Uri, siparisler: List<Siparis>) {
         canvas.drawLine(solMargin, yPos, 555f, yPos, cizgiPaint)
         yPos += 30f
 
-        // Siparişleri Listeleme Döngüsü
         for (siparis in siparisler) {
-            // Eğer sayfa sonuna gelirsek, yeni sayfa açıyoruz
-            if (yPos > 780f) {
+            if (yPos > 720f) { // Sayfa sonuna yaklaşıldıysa yeni sayfa aç
                 pdfDocument.finishPage(page)
                 page = pdfDocument.startPage(pageInfo)
                 canvas = page.canvas
@@ -67,11 +65,24 @@ fun createPdf(context: Context, uri: Uri, siparisler: List<Siparis>) {
             val siparisTarihi = format.format(Date(siparis.tarih))
             val formatliTutar = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(siparis.toplamTutar)
 
-            // Sipariş Müşterisi ve Tarihi
-            canvas.drawText("Müşteri: ${siparis.musteriEmail}", solMargin, yPos, altBaslikPaint)
+            // YENİ: Şirket Bilgileri ve Teslimat Adresi
+            val sirketAdi = siparis.sirketUnvani.ifEmpty { siparis.musteriEmail }
+            canvas.drawText("Alıcı: $sirketAdi", solMargin, yPos, altBaslikPaint)
             yPos += 20f
-            canvas.drawText("Sipariş Tarihi: $siparisTarihi  |  Durum: ${siparis.durum}", solMargin, yPos, normalPaint)
+
+            // Vergi ve Adres bilgileri varsa yazdır
+            if (siparis.vergiNo.isNotEmpty() && siparis.vergiNo != "-") {
+                canvas.drawText("Vergi: ${siparis.vergiDairesi} - ${siparis.vergiNo}", solMargin, yPos, normalPaint)
+                yPos += 20f
+            }
+            if (siparis.teslimatAdresi.isNotEmpty() && siparis.teslimatAdresi != "-") {
+                canvas.drawText("Adres: ${siparis.teslimatAdresi}", solMargin, yPos, normalPaint)
+                yPos += 20f
+            }
+
+            canvas.drawText("Tarih: $siparisTarihi  |  Durum: ${siparis.durum}", solMargin, yPos, normalPaint)
             yPos += 20f
+
             // Sipariş İçeriği ve Tutarı
             canvas.drawText("İçerik: ${siparis.siparisOzeti}", solMargin, yPos, normalPaint)
             yPos += 20f

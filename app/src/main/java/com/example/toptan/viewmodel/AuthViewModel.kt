@@ -26,12 +26,20 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun kayitOl(email: String, sifre: String, rol: String) {
+    fun kayitOl(email: String, sifre: String, rol: String, sirketUnvani: String, vergiDairesi: String, vergiNo: String, adres: String, yetkiliKisi: String, telefon: String) {
         val temizEmail = email.trim()
         val temizSifre = sifre.trim()
+        val temizSirketUnvani = sirketUnvani.trim()
+        val temizVergiDairesi = vergiDairesi.trim()
+        val temizVergiNo = vergiNo.trim()
+        val temizAdres = adres.trim()
+        val temizYetkili = yetkiliKisi.trim()
+        val temizTelefon = telefon.trim()
 
-        if (temizEmail.isEmpty() || temizSifre.isEmpty()) {
-            _mesaj.value = "Lütfen tüm alanları doldurun."
+        if (temizEmail.isEmpty() || temizSifre.isEmpty() || temizSirketUnvani.isEmpty() ||
+            temizVergiDairesi.isEmpty() || temizVergiNo.isEmpty() || temizAdres.isEmpty() ||
+            temizYetkili.isEmpty() || temizTelefon.isEmpty()) {
+            _mesaj.value = "Lütfen tüm firma ve iletişim bilgilerini eksiksiz doldurun."
             return
         }
 
@@ -42,6 +50,12 @@ class AuthViewModel : ViewModel() {
                     val kullaniciVerisi = hashMapOf(
                         "email" to temizEmail,
                         "rol" to rol,
+                        "sirketUnvani" to temizSirketUnvani,
+                        "vergiDairesi" to temizVergiDairesi,
+                        "vergiNo" to temizVergiNo,
+                        "adres" to temizAdres,
+                        "yetkiliKisi" to temizYetkili, // YENİ
+                        "telefon" to temizTelefon,     // YENİ
                         "kayitTarihi" to System.currentTimeMillis()
                     )
 
@@ -49,16 +63,15 @@ class AuthViewModel : ViewModel() {
                         .addOnSuccessListener {
                             _mesaj.value = "Kayıt başarılı! Yönlendiriliyorsunuz..."
                             _kullaniciRolu.value = rol
-                            // Yeni kayıt olan kullanıcının da token'ını anında kaydet
                             fcmTokenGuncelle()
                         }
                         .addOnFailureListener {
-                            _mesaj.value = "Veritabanı kaydı başarısız oldu."
+                            _mesaj.value = "Şirket bilgileri veritabanına kaydedilemedi."
                         }
                 }
             }
             .addOnFailureListener { hata ->
-                _mesaj.value = hata.message ?: "Kayıt başarısız."
+                _mesaj.value = hata.message ?: "Kayıt işlemi başarısız."
             }
     }
 
@@ -124,6 +137,22 @@ class AuthViewModel : ViewModel() {
                         .set(hashMapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
                 }
         }
+    }
+
+    fun sifreSifirla(email: String) {
+        val temizEmail = email.trim()
+        if (temizEmail.isEmpty()) {
+            _mesaj.value = "Lütfen e-posta adresinizi girin."
+            return
+        }
+
+        auth.sendPasswordResetEmail(temizEmail)
+            .addOnSuccessListener {
+                _mesaj.value = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! (başarılı)"
+            }
+            .addOnFailureListener { hata ->
+                _mesaj.value = "Hata: ${hata.message}"
+            }
     }
 
     fun cikisYap() {

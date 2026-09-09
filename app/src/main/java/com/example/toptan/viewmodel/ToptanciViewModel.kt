@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
+import com.example.toptan.model.Siparis
 
 class ToptanciViewModel : ViewModel() {
 
@@ -38,11 +39,16 @@ class ToptanciViewModel : ViewModel() {
     // Toptancının kendi ürünlerini tutan liste
     private val _toptanciUrunleri = MutableStateFlow<List<Urun>>(emptyList())
     val toptanciUrunleri: StateFlow<List<Urun>> = _toptanciUrunleri
+    private val _toptanciSiparisleri = MutableStateFlow<List<Siparis>>(emptyList())
+    val toptanciSiparisleri: StateFlow<List<Siparis>> = _toptanciSiparisleri
 
-    // EKRAN AÇILDIĞINDA OTOMATİK ÇALIŞACAK KISIM
+    private val _siparislerYukleniyor = MutableStateFlow(true)
+    val siparislerYukleniyor: StateFlow<Boolean> = _siparislerYukleniyor
+
     init {
         istatistikleriGetir()
-        fcmTokenKaydet()
+        toptanciUrunleriniGetir()
+        siparisleriGetir() // Başlangıçta siparişleri de yükle
     }
 
     private fun fcmTokenKaydet() {
@@ -58,6 +64,29 @@ class ToptanciViewModel : ViewModel() {
                     .set(data, SetOptions.merge())
             }
         }
+    }
+
+    fun siparisleriGetir() {
+        val toptanciId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        _siparislerYukleniyor.value = true
+
+        FirebaseFirestore.getInstance().collection("siparisler")
+            .whereEqualTo("toptanciId", toptanciId)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    val liste = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Siparis::class.java)?.copy(siparisId = doc.id)
+                    }
+                    // En yeni siparişler en üstte görünsün diye tarihe göre sıralıyoruz
+                    _toptanciSiparisleri.value = liste.sortedByDescending { it.tarih }
+                    _siparislerYukleniyor.value = false
+                }
+            }
+    }
+
+    fun siparisDurumuGuncelle(siparisId: String, yeniDurum: String) {
+        FirebaseFirestore.getInstance().collection("siparisler").document(siparisId)
+            .update("durum", yeniDurum)
     }
 
     fun istatistikleriGetir() {

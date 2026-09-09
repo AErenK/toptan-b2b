@@ -3,8 +3,6 @@ package com.example.toptan.ui.toptanci
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,9 +10,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,7 +40,8 @@ fun ToptanciHomeScreen(
     onLogoutClick: () -> Unit,
     onNavigateToSiparisler: () -> Unit,
     onNavigateToUrunEkle: () -> Unit,
-    onNavigateToKatalog: () -> Unit
+    onNavigateToKatalog: () -> Unit,
+    onNavigateToMusteriler: () -> Unit // YENİ: Müşteriler Ekranına Giden Rota
 ) {
     val toplamUrun by viewModel.toplamUrunSayisi.collectAsState()
     val bekleyenSiparis by viewModel.bekleyenSiparisSayisi.collectAsState()
@@ -53,7 +52,7 @@ fun ToptanciHomeScreen(
     val mevcutKullanici = FirebaseAuth.getInstance().currentUser
     val toptanciEmail = mevcutKullanici?.email ?: "Toptancı"
 
-    // YENİ ÖZELLİK: Kritik Stok Hesaplama (Stoğu 20'nin altına düşenler)
+    // Kritik Stok Hesaplama (Stoğu 20'nin altına düşenler)
     val kritikStokluUrunler = remember(tumUrunler) {
         tumUrunler.filter { it.stok <= 20 }
     }
@@ -141,7 +140,7 @@ fun ToptanciHomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // YENİ: KRİTİK STOK MODÜLÜ
+            // KRİTİK STOK MODÜLÜ
             if (kritikStokluUrunler.isNotEmpty()) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,6 +170,7 @@ fun ToptanciHomeScreen(
 
             // Grid tasarımı için manuel bir Row/Column hiyerarşisi
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // YENİ: Grid yapısına Müşterilerim butonunu ekliyoruz
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     GridActionCard(
                         modifier = Modifier.weight(1f),
@@ -179,6 +179,14 @@ fun ToptanciHomeScreen(
                         bgColor = Color(0xFFDBEAFE),
                         iconColor = Color(0xFF2563EB),
                         onClick = onNavigateToSiparisler
+                    )
+                    GridActionCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Müşterilerim", // YENİ BUTON
+                        icon = Icons.Default.Group,
+                        bgColor = Color(0xFFDCFCE7),
+                        iconColor = Color(0xFF16A34A),
+                        onClick = onNavigateToMusteriler
                     )
                     GridActionCard(
                         modifier = Modifier.weight(1f),
@@ -269,7 +277,7 @@ fun GridActionCard(modifier: Modifier = Modifier, title: String, icon: ImageVect
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -280,7 +288,7 @@ fun GridActionCard(modifier: Modifier = Modifier, title: String, icon: ImageVect
                 Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(24.dp))
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E293B))
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

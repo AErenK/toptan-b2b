@@ -1,54 +1,72 @@
 package com.example.toptan.ui.musteri
 
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.*
 import com.example.toptan.ui.ToptanciUrunEkleScreen
-import com.example.toptan.ui.auth.LoginScreen
-import com.example.toptan.ui.auth.RegisterScreen
-import com.example.toptan.ui.toptanci.ToptanciHomeScreen
-import com.example.toptan.ui.toptanci.ToptanciKatalogScreen
-import com.example.toptan.ui.toptanci.ToptanciSiparisScreen
+import com.example.toptan.ui.auth.*
+import com.example.toptan.ui.toptanci.*
 import com.example.toptan.viewmodel.CartViewModel
+
+// 1. Rotaları Merkezi Tanımlama (Tip güvenliği ve hata önleme)
+object Routes {
+    const val SPLASH = "splash"
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+
+    // Toptancı Rotaları
+    const val TOPTANCI_HOME = "toptanci_home"
+    const val TOPTANCI_KATALOG = "toptanci_katalog"
+    const val TOPTANCI_URUN_EKLE = "toptanci_urun_ekle"
+    const val TOPTANCI_SIPARISLER = "toptanci_siparisler"
+    const val TOPTANCI_MUSTERILER = "toptanci_musteriler" // YENİ: Müşteri Yönetim Rotası
+
+    // Müşteri Rotaları
+    const val HOME = "home"
+    const val ORDERS = "orders"
+    const val CART = "cart"
+    const val PROFILE = "profile"
+    const val CATALOG = "catalog/{toptanciId}"
+    const val PRODUCT_DETAIL = "product_detail/{urunId}"
+}
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
     val sharedCartViewModel: CartViewModel = viewModel()
     val sepetListesi by sharedCartViewModel.sepet.collectAsState()
     val sepetUrunSayisi = sepetListesi.size
 
+    // Sadece alt menünün (BottomBar) görüneceği MÜŞTERİ ana ekranları
+    val bottomBarDestinations = listOf(
+        Routes.HOME,
+        Routes.ORDERS,
+        Routes.CART,
+        Routes.PROFILE
+    )
+
+    // Daha güvenli alt menü görünürlük kontrolü
+    val showBottomBar = bottomBarDestinations.contains(currentRoute) ||
+            currentRoute?.startsWith("catalog/") == true
+
     Scaffold(
         bottomBar = {
-            // Toptancı sayfalarında ve Auth ekranlarında alt menüyü gizliyoruz
-            val gizlenecekEkranlar = listOf("login", "register", "toptanci_home", "toptanci_siparisler", "toptanci_urun_ekle", "toptanci_katalog")
-            if (currentRoute !in gizlenecekEkranlar) {
+            if (showBottomBar) {
                 BottomNavigationBar(navController = navController, sepetUrunSayisi = sepetUrunSayisi)
             }
         },
@@ -56,105 +74,98 @@ fun MainScreen() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = Routes.SPLASH,
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable("login") {
-                LoginScreen(
-                    onLoginSuccess = { rol ->
-                        val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
-                        navController.navigate(hedefEkran) {
-                            popUpTo("login") { inclusive = true }
-                        }
+            // --- AUTH (KİMLİK DOĞRULAMA) EKRANLARI ---
+            composable(Routes.SPLASH) {
+                SplashScreen(
+                    onNavigateToLogin = {
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.SPLASH) { inclusive = true } }
                     },
-                    onNavigateToRegister = {
-                        navController.navigate("register")
+                    onNavigateToHome = { rol ->
+                        val hedef = if (rol == "toptanci") Routes.TOPTANCI_HOME else Routes.HOME
+                        navController.navigate(hedef) { popUpTo(Routes.SPLASH) { inclusive = true } }
                     }
-                )
-            }
-            composable("register") {
-                RegisterScreen(
-                    onNavigateToLogin = { navController.popBackStack() },
-                    onRegisterSuccess = { rol ->
-                        val hedefEkran = if (rol == "toptanci") "toptanci_home" else "home"
-                        navController.navigate(hedefEkran) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
-            }
-            composable("toptanci_home") {
-                ToptanciHomeScreen(
-                    onLogoutClick = {
-                        navController.navigate("login") {
-                            popUpTo(0) {
-                                inclusive = true
-                            }
-                        }
-                    },
-                    onNavigateToSiparisler = { navController.navigate("toptanci_siparisler") },
-                    onNavigateToUrunEkle = { navController.navigate("toptanci_urun_ekle") },
-                    onNavigateToKatalog = { navController.navigate("toptanci_katalog") }
-                )
-            }
-            composable("toptanci_katalog") {
-                ToptanciKatalogScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
-            composable("toptanci_urun_ekle") {
-                ToptanciUrunEkleScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
-            composable("toptanci_siparisler") {
-                ToptanciSiparisScreen(
-                    onBackClick = { navController.popBackStack() }
                 )
             }
 
-            composable("home") {
-                HomeScreen(
-                    onNavigateToCatalog = { toptanciId ->
-                        navController.navigate("catalog/$toptanciId")
+            composable(Routes.LOGIN) {
+                LoginScreen(
+                    onLoginSuccess = { rol ->
+                        val hedef = if (rol == "toptanci") Routes.TOPTANCI_HOME else Routes.HOME
+                        navController.navigate(hedef) { popUpTo(Routes.LOGIN) { inclusive = true } }
+                    },
+                    onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
+                )
+            }
+
+            composable(Routes.REGISTER) {
+                RegisterScreen(
+                    onNavigateToLogin = { navController.popBackStack() },
+                    onRegisterSuccess = { rol ->
+                        val hedef = if (rol == "toptanci") Routes.TOPTANCI_HOME else Routes.HOME
+                        // Best Practice: Tüm geçmişi güvenle silmek için graph.id kullanımı
+                        navController.navigate(hedef) { popUpTo(navController.graph.id) { inclusive = true } }
                     }
                 )
             }
-            composable("catalog/{toptanciId}") { backStackEntry ->
-                val tiklananToptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
+
+            // --- TOPTANCI YÖNETİM EKRANLARI ---
+            composable(Routes.TOPTANCI_HOME) {
+                ToptanciHomeScreen(
+                    onLogoutClick = {
+                        navController.navigate(Routes.LOGIN) { popUpTo(navController.graph.id) { inclusive = true } }
+                    },
+                    onNavigateToSiparisler = { navController.navigate(Routes.TOPTANCI_SIPARISLER) },
+                    onNavigateToUrunEkle = { navController.navigate(Routes.TOPTANCI_URUN_EKLE) },
+                    onNavigateToKatalog = { navController.navigate(Routes.TOPTANCI_KATALOG) },
+                    // YENİ: Toptancı ana ekranındaki "Müşterilerim" butonunu buraya bağladık
+                    onNavigateToMusteriler = { navController.navigate(Routes.TOPTANCI_MUSTERILER) }
+                )
+            }
+
+            composable(Routes.TOPTANCI_KATALOG) { ToptanciKatalogScreen(onBackClick = { navController.popBackStack() }) }
+            composable(Routes.TOPTANCI_URUN_EKLE) { ToptanciUrunEkleScreen(onBackClick = { navController.popBackStack() }) }
+            composable(Routes.TOPTANCI_SIPARISLER) { ToptanciSiparisScreen(onBackClick = { navController.popBackStack() }) }
+
+            // YENİ: Müşterilerim Ekranı Rotası
+            composable(Routes.TOPTANCI_MUSTERILER) {
+                ToptanciMusterilerScreen(onBackClick = { navController.popBackStack() })
+            }
+
+            // --- MÜŞTERİ ALIŞVERİŞ EKRANLARI ---
+            composable(Routes.HOME) {
+                HomeScreen(onNavigateToCatalog = { toptanciId -> navController.navigate("catalog/$toptanciId") })
+            }
+
+            composable(Routes.CATALOG) { backStackEntry ->
+                val toptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
                 CatalogScreen(
-                    toptanciId = tiklananToptanciId,
+                    toptanciId = toptanciId,
                     cartViewModel = sharedCartViewModel,
                     onBackClick = { navController.popBackStack() },
-                    onUrunClick = { urunId ->
-                        navController.navigate("product_detail/$urunId")
-                    }
+                    onUrunClick = { urunId -> navController.navigate("product_detail/$urunId") }
                 )
             }
-            composable("orders") { OrdersScreen() }
-            composable("cart") {
-                CartScreen(viewModel = sharedCartViewModel)
-            }
-            // PROFİL EKRANI
-            composable("profile") {
-                ProfileScreen(
-                    onLogoutClick = {
-                        // Çıkış işlemi ProfileScreen içinde yapılıyor, biz sadece Login'e atıyoruz
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onNavigateToSiparislerim = {
-                        navController.navigate("orders") // Senin geçmiş siparişler rotan "siparislerim" ise buraya onu yaz
-                    }
-                )
-            }
-            composable("product_detail/{urunId}") { backStackEntry ->
+
+            composable(Routes.PRODUCT_DETAIL) { backStackEntry ->
                 val urunId = backStackEntry.arguments?.getString("urunId") ?: ""
                 ProductDetailScreen(
                     urunId = urunId,
                     cartViewModel = sharedCartViewModel,
                     onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.ORDERS) { OrdersScreen() }
+
+            composable(Routes.CART) { CartScreen(viewModel = sharedCartViewModel) }
+
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onLogoutClick = { navController.navigate(Routes.LOGIN) { popUpTo(navController.graph.id) { inclusive = true } } },
+                    onNavigateToSiparislerim = { navController.navigate(Routes.ORDERS) }
                 )
             }
         }
@@ -178,30 +189,28 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
             indicatorColor = Color(0xFFDBEAFE)
         )
 
+        // Ortak bir navigasyon fonksiyonu ile tekrar eden kodları azalttık
+        val navigateTo = { route: String ->
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, contentDescription = "Keşfet") },
             label = { Text("Keşfet", fontSize = 11.sp) },
-            selected = currentRoute == "home" || (currentRoute?.startsWith("catalog") == true),
-            onClick = {
-                navController.navigate("home") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
+            selected = currentRoute == Routes.HOME || currentRoute?.startsWith("catalog/") == true,
+            onClick = { navigateTo(Routes.HOME) },
             colors = itemColors
         )
+
         NavigationBarItem(
-            icon = { Icon(Icons.Default.List, contentDescription = "Siparişler") },
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Siparişler") },
             label = { Text("Siparişler", fontSize = 11.sp) },
-            selected = currentRoute == "orders",
-            onClick = {
-                navController.navigate("orders") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
+            selected = currentRoute == Routes.ORDERS,
+            onClick = { navigateTo(Routes.ORDERS) },
             colors = itemColors
         )
 
@@ -220,28 +229,16 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
                 }
             },
             label = { Text("Sepet", fontSize = 11.sp) },
-            selected = currentRoute == "cart",
-            onClick = {
-                navController.navigate("cart") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
+            selected = currentRoute == Routes.CART,
+            onClick = { navigateTo(Routes.CART) },
             colors = itemColors
         )
 
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, contentDescription = "Profil") },
             label = { Text("Profil", fontSize = 11.sp) },
-            selected = currentRoute == "profile",
-            onClick = {
-                navController.navigate("profile") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
+            selected = currentRoute == Routes.PROFILE,
+            onClick = { navigateTo(Routes.PROFILE) },
             colors = itemColors
         )
     }

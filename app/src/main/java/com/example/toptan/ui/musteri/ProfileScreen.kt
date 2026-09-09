@@ -51,31 +51,47 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showSupportDialog by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
-    var isCompanyInfoExpanded by remember { mutableStateOf(false) } // Akordeon menü state'i
+    var isCompanyInfoExpanded by remember { mutableStateOf(false) }
 
     val maxLimit = 50000.0
     var cariLimit by remember { mutableStateOf(maxLimit) }
 
-    // Dinamik hesaplamalar
+    var sirketUnvani by remember { mutableStateOf("Yükleniyor...") }
+    var vergiDairesi by remember { mutableStateOf("-") }
+    var vergiNo by remember { mutableStateOf("-") }
+    var adres by remember { mutableStateOf("-") }
+
+    var yetkiliKisi by remember { mutableStateOf("-") }
+    var telefon by remember { mutableStateOf("-") }
+
     val kullanilanLimit = maxLimit - cariLimit
     val kullanimOrani = (kullanilanLimit / maxLimit).toFloat()
 
     val formatliLimit = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(cariLimit)
     val formatliKullanilan = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(kullanilanLimit)
 
-    // VIP Seviyesi Hesaplama
     val (vipSeviye, vipRenk) = when {
-        kullanilanLimit >= 30000.0 -> Pair("PLATINUM", Color(0xFFE5E7EB)) // Gümüş/Platin Rengi
-        kullanilanLimit >= 15000.0 -> Pair("GOLD", Color(0xFFF59E0B))     // Altın Rengi
-        else -> Pair("SILVER", Color(0xFF94A3B8))                         // Standart Gri
+        kullanilanLimit >= 30000.0 -> Pair("PLATINUM", Color(0xFFE5E7EB))
+        kullanilanLimit >= 15000.0 -> Pair("GOLD", Color(0xFFF59E0B))
+        else -> Pair("SILVER", Color(0xFF94A3B8))
     }
 
+    // Hem Cari Limiti Hem de Yeni Eklediğimiz Şirket Bilgilerini Dinliyoruz
     LaunchedEffect(user?.uid) {
         if (user != null) {
             FirebaseFirestore.getInstance().collection("kullanicilar").document(user.uid)
                 .addSnapshotListener { snapshot, _ ->
-                    if (snapshot != null && snapshot.exists() && snapshot.contains("cariLimit")) {
+                    if (snapshot != null && snapshot.exists()) {
                         cariLimit = snapshot.getDouble("cariLimit") ?: maxLimit
+
+                        // Kayıt ekranından gelen verileri okuyoruz
+                        sirketUnvani = snapshot.getString("sirketUnvani") ?: "Şirket Adı Belirtilmemiş"
+                        vergiDairesi = snapshot.getString("vergiDairesi") ?: "-"
+                        vergiNo = snapshot.getString("vergiNo") ?: "-"
+                        adres = snapshot.getString("adres") ?: "-"
+                        // --- YENİ EKLENEN İLETİŞİM BİLGİLERİ ---
+                        yetkiliKisi = snapshot.getString("yetkiliKisi") ?: "-"
+                        telefon = snapshot.getString("telefon") ?: "-"
                     }
                 }
         }
@@ -86,7 +102,6 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
     ) {
-        // --- 1. ÜST KARŞILAMA ALANI ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,7 +144,6 @@ fun ProfileScreen(
             }
         }
 
-        // --- 2. İÇERİK ALANI ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -137,12 +151,12 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // YENİ: DİNAMİK CARİ KART
+            // DİNAMİK CARİ KART
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .height(200.dp), // Biraz uzattık
+                    .height(200.dp),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
@@ -153,7 +167,6 @@ fun ProfileScreen(
                         .padding(24.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                        // Üst Kısım: Başlık ve VIP Rozeti
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = vipRenk, modifier = Modifier.size(18.dp))
@@ -163,14 +176,12 @@ fun ProfileScreen(
                             Icon(Icons.Default.CreditCard, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(28.dp))
                         }
 
-                        // Orta Kısım: Bakiye
                         Column {
                             Text("Kullanılabilir Cari Limit", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("$formatliLimit ₺", color = Color(0xFF10B981), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
                         }
 
-                        // Alt Kısım: Dinamik Progress Bar
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Kullanım: $formatliKullanilan ₺", color = Color(0xFF94A3B8), fontSize = 11.sp)
@@ -190,7 +201,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // YENİ: DİNAMİK (AKORDEON) ŞİRKET BİLGİLERİ KARTI
+            // DİNAMİK ŞİRKET BİLGİLERİ KARTI (Veriler Firebase'den geliyor)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -223,10 +234,13 @@ fun ProfileScreen(
                         Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                             HorizontalDivider(color = Color(0xFFF1F5F9))
                             Spacer(modifier = Modifier.height(16.dp))
-                            CompanyInfoRow("Şirket Ünvanı:", "Toptan Yazılım Tic. Ltd. Şti.")
-                            CompanyInfoRow("Vergi Dairesi:", "İzmit V.D.")
-                            CompanyInfoRow("Vergi No:", "1234567890")
-                            CompanyInfoRow("Fatura Adresi:", "İzmit, Kocaeli")
+                            CompanyInfoRow("Şirket Ünvanı:", sirketUnvani)
+                            CompanyInfoRow("Vergi Dairesi:", vergiDairesi)
+                            CompanyInfoRow("Vergi No:", vergiNo)
+                            CompanyInfoRow("Fatura Adresi:", adres)
+                            // --- YENİ EKLENEN İLETİŞİM BİLGİLERİ ---
+                            CompanyInfoRow("Yetkili:", yetkiliKisi)
+                            CompanyInfoRow("İletişim:", telefon)
                         }
                     }
                 }
@@ -243,9 +257,7 @@ fun ProfileScreen(
                     iconColor = Color(0xFF2563EB),
                     onClick = onNavigateToSiparislerim
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 ActionMenuCard(
                     icon = Icons.Default.HeadsetMic,
                     title = "Müşteri Hizmetleri",
@@ -253,9 +265,7 @@ fun ProfileScreen(
                     iconColor = Color(0xFFD97706),
                     onClick = { showSupportDialog = true }
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 ActionMenuCard(
                     icon = Icons.Default.Info,
                     title = "Uygulama Hakkında",
@@ -269,8 +279,83 @@ fun ProfileScreen(
     }
 
     // --- DIALOGLAR ---
-    // (Önceki mesajdaki dialoglar aynı kalacak, yer kaplamaması için kodun temizliğini korudum. Logout, Support, Info dialogları buraya dahildir.)
-    // ... [Logout, Support, Info Dialogları]
+
+    // 1. ÇIKIŞ YAP DİALOGU
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Çıkış Yap", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+            text = { Text("Hesabınızdan çıkış yapmak istediğinize emin misiniz?", fontSize = 14.sp, color = Color(0xFF64748B)) },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        FirebaseAuth.getInstance().signOut()
+                        onLogoutClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Evet, Çıkış Yap", color = Color.White, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("İptal", color = Color(0xFF64748B), fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
+
+    // 2. MÜŞTERİ HİZMETLERİ DİALOGU
+    if (showSupportDialog) {
+        AlertDialog(
+            onDismissRequest = { showSupportDialog = false },
+            title = { Text("Müşteri Hizmetleri", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+            text = {
+                Column {
+                    Text("Destek ekibimize çalışma saatleri içinde ulaşabilirsiniz.", fontSize = 14.sp, color = Color(0xFF64748B))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("📞 Telefon: 0850 123 45 67", fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("✉️ E-Posta: destek@toptanb2b.com", fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B))
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            confirmButton = {
+                Button(
+                    onClick = { showSupportDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Tamam", color = Color.White, fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
+
+    // 3. UYGULAMA HAKKINDA DİALOGU
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("Uygulama Hakkında", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+            text = {
+                Column {
+                    Text("Toptan B2B Sipariş ve Cari Yönetim Sistemi", fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Sürüm: 1.0.0 (Premium Edit)", fontSize = 14.sp, color = Color(0xFF64748B))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Tüm hakları saklıdır © 2026", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            confirmButton = {
+                Button(
+                    onClick = { showInfoDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Kapat", color = Color.White, fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
 }
 
 @Composable
@@ -284,7 +369,6 @@ fun CompanyInfoRow(label: String, value: String) {
     }
 }
 
-// Şık ve Tıklanabilir Yeni Menü Kartı
 @Composable
 fun ActionMenuCard(icon: ImageVector, title: String, subtitle: String, iconColor: Color, onClick: () -> Unit) {
     Card(

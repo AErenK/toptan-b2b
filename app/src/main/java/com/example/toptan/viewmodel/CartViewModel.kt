@@ -110,14 +110,12 @@ class CartViewModel : ViewModel() {
         val kullaniciRef = firestore.collection("kullanicilar").document(aktifKullanici.uid)
 
         kullaniciRef.get().addOnSuccessListener { snapshot ->
-            // Kullanıcının limiti var mı bak, yoksa 50.000 TL tanımla (Gerçek B2B'de bunu Toptancı belirler)
             val mevcutLimit = if (snapshot.exists() && snapshot.contains("cariLimit")) {
                 snapshot.getDouble("cariLimit") ?: 50000.0
             } else {
                 50000.0
             }
 
-            // LİMİT KONTROLÜ
             if (toplamTutar > mevcutLimit) {
                 _siparisMesaji.value = "Hata: Cari limitiniz yetersiz! (Kalan Limit: ${mevcutLimit} ₺)"
                 return@addOnSuccessListener
@@ -126,20 +124,35 @@ class CartViewModel : ViewModel() {
             _siparisMesaji.value = "Siparişiniz işleniyor..."
             val batch = firestore.batch()
 
-            // 1. İşlem: Müşterinin cari limitinden tutarı düş
+            // Cari limiti düş
             batch.update(kullaniciRef, "cariLimit", FieldValue.increment(-toplamTutar))
-
-            // Eğer veritabanında daha önce cariLimit açılmadıysa set ile oluştur
             if (!snapshot.exists() || !snapshot.contains("cariLimit")) {
                 batch.set(kullaniciRef, hashMapOf("cariLimit" to (50000.0 - toplamTutar)), com.google.firebase.firestore.SetOptions.merge())
             }
 
-            // 2. İşlem: Sipariş belgesini oluştur
+            // Firebase'den müşterinin şirket VE İLETİŞİM bilgilerini okuyoruz
+            val musteriSirketUnvani = snapshot.getString("sirketUnvani") ?: "Belirtilmemiş Şirket"
+            val musteriAdresi = snapshot.getString("adres") ?: "Adres Belirtilmemiş"
+            val musteriVergiNo = snapshot.getString("vergiNo") ?: "-"
+            val musteriVergiDairesi = snapshot.getString("vergiDairesi") ?: "-"
+            // --- YENİ EKLENEN İLETİŞİM BİLGİLERİ ---
+            val musteriYetkili = snapshot.getString("yetkiliKisi") ?: "Belirtilmemiş"
+            val musteriTelefon = snapshot.getString("telefon") ?: "Belirtilmemiş"
+
+            // Sipariş belgesini oluştur ve Tüm Bilgileri Ekle
             val siparisRef = firestore.collection("siparisler").document()
             val yeniSiparis = hashMapOf(
                 "siparisId" to siparisRef.id,
                 "musteriUid" to aktifKullanici.uid,
                 "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
+                "sirketUnvani" to musteriSirketUnvani,
+                "teslimatAdresi" to musteriAdresi,
+                "vergiNo" to musteriVergiNo,
+                "vergiDairesi" to musteriVergiDairesi,
+                // --- YENİ EKLENEN İLETİŞİM BİLGİLERİ ---
+                "yetkiliKisi" to musteriYetkili,
+                "telefon" to musteriTelefon,
+
                 "toptanciId" to toptanciId,
                 "siparisOzeti" to sepetOzet,
                 "toplamTutar" to toplamTutar,
@@ -148,11 +161,11 @@ class CartViewModel : ViewModel() {
             )
             batch.set(siparisRef, yeniSiparis)
 
-            // 3. İşlem: Stokları Düş
+            // Stokları Düş
             for (oge in _sepet.value) {
                 val urunRef = firestore.collection("urunler").document(oge.urun.id)
                 batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
-                batch.update(urunRef, "stokMiktari", FieldValue.increment(-oge.secilenMiktar.toLong())) // Yedek stok alanın varsa
+                batch.update(urunRef, "stokMiktari", FieldValue.increment(-oge.secilenMiktar.toLong()))
             }
 
             // İşlemleri Ateşle

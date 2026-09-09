@@ -1,13 +1,17 @@
 package com.example.toptan.ui.musteri
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
@@ -18,12 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.model.Siparis
+import com.example.toptan.utils.createPdf // Kendi PDF fonksiyonunu import ettiğinden emin ol!
 import com.example.toptan.viewmodel.MusteriSiparisViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -37,6 +43,16 @@ fun OrdersScreen(
 ) {
     val siparisler by viewModel.siparisler.collectAsState()
     val yukleniyor by viewModel.yukleniyor.collectAsState()
+    val context = LocalContext.current
+
+    // PDF Kaydetme Penceresini Tetikleyen Launcher
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri != null) {
+            createPdf(context, uri, siparisler)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -44,18 +60,35 @@ fun OrdersScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Siparişlerim",
+                            text = "Fatura & Siparişlerim",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = Color(0xFF1E293B)
                         )
                         if (siparisler.isNotEmpty()) {
                             Text(
-                                text = "${siparisler.size} toplam sipariş",
+                                text = "${siparisler.size} sipariş kaydı bulundu",
                                 fontSize = 11.sp,
                                 color = Color(0xFF64748B),
                                 fontWeight = FontWeight.Medium
                             )
+                        }
+                    }
+                },
+                actions = {
+                    // YENİ: PDF Fatura İndirme Butonu
+                    if (siparisler.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                val defaultFileName = "Gecmis_Siparislerim_${System.currentTimeMillis()}.pdf"
+                                pdfLauncher.launch(defaultFileName)
+                            },
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(38.dp)
+                                .background(Color(0xFFF3E8FF), shape = CircleShape)
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Çıktısı Al", tint = Color(0xFF9333EA), modifier = Modifier.size(18.dp))
                         }
                     }
                 },
@@ -148,6 +181,7 @@ fun MusteriSiparisKarti(siparis: Siparis) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // 1. Üst Kısım: Tarih ve Durum Rozeti
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -187,6 +221,22 @@ fun MusteriSiparisKarti(siparis: Siparis) {
             HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 2. YENİ: Fatura/Şirket Bilgileri (Eğer kayıtlıysa gösterir)
+            if (siparis.sirketUnvani.isNotEmpty() && siparis.sirketUnvani != "Belirtilmemiş Şirket") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Fatura Kesilen: ${siparis.sirketUnvani}",
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // 3. Orta Kısım: Sipariş Özeti
             Text(
                 text = "Sipariş İçeriği",
                 fontSize = 11.sp,
@@ -203,13 +253,14 @@ fun MusteriSiparisKarti(siparis: Siparis) {
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // 4. Alt Kısım: Toplam Tutar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Toplam Tutar",
+                    text = "Açık Hesaptan Düşülen",
                     fontSize = 12.sp,
                     color = Color(0xFF64748B),
                     fontWeight = FontWeight.Medium

@@ -31,6 +31,14 @@ data class Siparis(
     val siparisId: String = "",
     val musteriUid: String = "",
     val musteriEmail: String = "",
+    val sirketUnvani: String = "",
+    val teslimatAdresi: String = "",
+    val vergiNo: String = "",
+    val vergiDairesi: String = "",
+
+    val yetkiliKisi: String = "",
+    val telefon: String = "",
+
     val toptanciId: String = "",
     val siparisOzeti: String = "",
     val toplamTutar: Double = 0.0,

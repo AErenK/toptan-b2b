@@ -42,14 +42,13 @@ class ToptanciSiparisViewModel : ViewModel() {
             }
     }
 
-    // YENİ EKLENEN FONKSİYON: Sipariş durumunu günceller
     fun siparisDurumuGuncelle(siparisId: String, yeniDurum: String) {
-        if (siparisId.isEmpty()) return
-
-        firestore.collection("siparisler").document(siparisId)
+        FirebaseFirestore.getInstance().collection("siparisler").document(siparisId)
             .update("durum", yeniDurum)
             .addOnSuccessListener {
-                // Başarılı olduğunda SnapshotListener otomatik olarak ekranı güncelleyecek
+                // Eğer siparişleri dinleyen bir SnapshotListener kullanıyorsan liste otomatik güncellenir.
+                // Kullanmıyorsan burada siparişleri yeniden getiren fonksiyonunu çağır:
+                // siparisleriGetir()
             }
     }
 }
