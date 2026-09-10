@@ -1,4 +1,4 @@
-package com.example.toptan.ui.musteri
+package com.example.toptan.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -18,7 +18,7 @@ import androidx.navigation.compose.*
 import com.example.toptan.ui.ToptanciUrunEkleScreen
 import com.example.toptan.ui.auth.*
 import com.example.toptan.ui.toptanci.*
-import com.example.toptan.viewmodel.CartViewModel
+import com.example.toptan.viewmodel.musteri.CartViewModel
 
 // 1. Rotaları Merkezi Tanımlama (Tip güvenliği ve hata önleme)
 object Routes {
@@ -136,12 +136,16 @@ fun MainScreen() {
 
             // --- MÜŞTERİ ALIŞVERİŞ EKRANLARI ---
             composable(Routes.HOME) {
-                HomeScreen(onNavigateToCatalog = { toptanciId -> navController.navigate("catalog/$toptanciId") })
+                _root_ide_package_.com.example.toptan.ui.musteri.HomeScreen(onNavigateToCatalog = { toptanciId ->
+                    navController.navigate(
+                        "catalog/$toptanciId"
+                    )
+                })
             }
 
             composable(Routes.CATALOG) { backStackEntry ->
                 val toptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
-                CatalogScreen(
+                _root_ide_package_.com.example.toptan.ui.musteri.CatalogScreen(
                     toptanciId = toptanciId,
                     cartViewModel = sharedCartViewModel,
                     onBackClick = { navController.popBackStack() },
@@ -151,20 +155,30 @@ fun MainScreen() {
 
             composable(Routes.PRODUCT_DETAIL) { backStackEntry ->
                 val urunId = backStackEntry.arguments?.getString("urunId") ?: ""
-                ProductDetailScreen(
+                _root_ide_package_.com.example.toptan.ui.musteri.ProductDetailScreen(
                     urunId = urunId,
                     cartViewModel = sharedCartViewModel,
                     onBackClick = { navController.popBackStack() }
                 )
             }
 
-            composable(Routes.ORDERS) { OrdersScreen() }
+            composable(Routes.ORDERS) { _root_ide_package_.com.example.toptan.ui.musteri.OrdersScreen() }
 
-            composable(Routes.CART) { CartScreen(viewModel = sharedCartViewModel) }
+            composable(Routes.CART) {
+                _root_ide_package_.com.example.toptan.ui.musteri.CartScreen(
+                    viewModel = sharedCartViewModel
+                )
+            }
 
             composable(Routes.PROFILE) {
-                ProfileScreen(
-                    onLogoutClick = { navController.navigate(Routes.LOGIN) { popUpTo(navController.graph.id) { inclusive = true } } },
+                _root_ide_package_.com.example.toptan.ui.musteri.ProfileScreen(
+                    onLogoutClick = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(navController.graph.id) {
+                                inclusive = true
+                            }
+                        }
+                    },
                     onNavigateToSiparislerim = { navController.navigate(Routes.ORDERS) }
                 )
             }

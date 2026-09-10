@@ -1,111 +1,101 @@
-package com.example.toptan.utils // Kendi paket adına göre düzenleyebilirsin
+package com.example.toptan.utils
 
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
-import android.net.Uri
+import android.os.Environment
 import android.widget.Toast
 import com.example.toptan.model.Siparis
+import java.io.File
+import java.io.FileOutputStream
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-fun createPdf(context: Context, uri: Uri, siparisler: List<Siparis>) {
-    try {
+object PdfHelper {
+
+    fun siparisPdfOlustur(context: Context, siparis: Siparis) {
+        // 1. A4 Boyutlarında bir PDF dökümanı başlatıyoruz
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // Standart A4 Kağıt Boyutu
-        var page = pdfDocument.startPage(pageInfo)
-        var canvas: Canvas = page.canvas
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+        val page = pdfDocument.startPage(pageInfo)
+        val canvas: Canvas = page.canvas
 
-        // Yazı Tipi ve Boyut Ayarları
-        val baslikPaint = Paint().apply {
-            textSize = 20f
-            isFakeBoldText = true
-            color = Color.rgb(30, 41, 59) // Koyu Lacivert (Uygulama temana uygun)
-        }
-        val altBaslikPaint = Paint().apply {
-            textSize = 14f
-            isFakeBoldText = true
-            color = Color.rgb(37, 99, 235) // Mavi
-        }
-        val normalPaint = Paint().apply {
-            textSize = 12f
-            color = Color.rgb(100, 116, 139) // Gri
-        }
-        val cizgiPaint = Paint().apply {
-            color = Color.LTGRAY
-            strokeWidth = 1f
-        }
+        // 2. Fırçalarımızı (Yazı tiplerini ve renkleri) hazırlıyoruz
+        val cizgiPaint = Paint().apply { color = Color.LTGRAY; strokeWidth = 1f }
+        val baslikPaint = Paint().apply { textSize = 22f; isFakeBoldText = true; color = Color.rgb(37, 99, 235) } // Mavi
+        val altBaslikPaint = Paint().apply { textSize = 14f; isFakeBoldText = true; color = Color.BLACK }
+        val metinPaint = Paint().apply { textSize = 12f; color = Color.DKGRAY }
+        val tutarPaint = Paint().apply { textSize = 18f; isFakeBoldText = true; color = Color.rgb(22, 163, 74) } // Yeşil
 
-        var yPos = 50f
+        var yPos = 60f
         val solMargin = 40f
 
-        // Rapor Başlığı ve Tarih
-        val format = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR"))
-        val tarih = format.format(Date())
+        // 3. Başlık ve Tarih Bilgileri
+        canvas.drawText("B2B SİPARİŞ İRSALİYESİ", solMargin, yPos, baslikPaint)
+        yPos += 40f
 
-        canvas.drawText("TOPTANCI SİPARİŞ RAPORU", solMargin, yPos, baslikPaint)
-        yPos += 25f
-        canvas.drawText("Oluşturulma Tarihi: $tarih", solMargin, yPos, normalPaint)
-        yPos += 25f
+        val tarih = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale("tr", "TR")).format(Date(siparis.tarih))
+        canvas.drawText("Sipariş No: ${siparis.siparisId.take(8).uppercase()}", solMargin, yPos, metinPaint)
+        canvas.drawText("Tarih: $tarih", 400f, yPos, metinPaint)
+        yPos += 30f
+
         canvas.drawLine(solMargin, yPos, 555f, yPos, cizgiPaint)
         yPos += 30f
 
-        for (siparis in siparisler) {
-            if (yPos > 720f) { // Sayfa sonuna yaklaşıldıysa yeni sayfa aç
-                pdfDocument.finishPage(page)
-                page = pdfDocument.startPage(pageInfo)
-                canvas = page.canvas
-                yPos = 50f
-            }
+        // 4. Müşteri (Cari) Bilgileri
+        canvas.drawText("ALICI (MÜŞTERİ) BİLGİLERİ", solMargin, yPos, altBaslikPaint)
+        yPos += 25f
+        canvas.drawText("Firma Ünvanı: ${siparis.sirketUnvani}", solMargin, yPos, metinPaint)
+        yPos += 20f
+        canvas.drawText("Yetkili / Tel: ${siparis.yetkiliKisi} - ${siparis.telefon}", solMargin, yPos, metinPaint)
+        yPos += 20f
+        canvas.drawText("Vergi Dairesi/No: ${siparis.vergiDairesi} / ${siparis.vergiNo}", solMargin, yPos, metinPaint)
+        yPos += 20f
+        canvas.drawText("Teslimat Adresi: ${siparis.teslimatAdresi}", solMargin, yPos, metinPaint)
+        yPos += 40f
 
-            val siparisTarihi = format.format(Date(siparis.tarih))
-            val formatliTutar = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(siparis.toplamTutar)
+        canvas.drawLine(solMargin, yPos, 555f, yPos, cizgiPaint)
+        yPos += 30f
 
-            // YENİ: Şirket Bilgileri ve Teslimat Adresi
-            val sirketAdi = siparis.sirketUnvani.ifEmpty { siparis.musteriEmail }
-            canvas.drawText("Alıcı: $sirketAdi", solMargin, yPos, altBaslikPaint)
-            yPos += 20f
+        // 5. Sipariş Edilen Ürünler (Sepet Özeti)
+        canvas.drawText("SİPARİŞ İÇERİĞİ", solMargin, yPos, altBaslikPaint)
+        yPos += 25f
 
-            // Vergi ve Adres bilgileri varsa yazdır
-            if (siparis.vergiNo.isNotEmpty() && siparis.vergiNo != "-") {
-                canvas.drawText("Vergi: ${siparis.vergiDairesi} - ${siparis.vergiNo}", solMargin, yPos, normalPaint)
+        // Sipariş özetini satır satır ayırıp PDF'e basıyoruz
+        val urunler = siparis.siparisOzeti.split("\n")
+        for (urun in urunler) {
+            if (urun.isNotBlank()) {
+                canvas.drawText("- $urun", solMargin, yPos, metinPaint)
                 yPos += 20f
             }
-            if (siparis.teslimatAdresi.isNotEmpty() && siparis.teslimatAdresi != "-") {
-                canvas.drawText("Adres: ${siparis.teslimatAdresi}", solMargin, yPos, normalPaint)
-                yPos += 20f
-            }
-
-            canvas.drawText("Tarih: $siparisTarihi  |  Durum: ${siparis.durum}", solMargin, yPos, normalPaint)
-            yPos += 20f
-
-            // Sipariş İçeriği ve Tutarı
-            canvas.drawText("İçerik: ${siparis.siparisOzeti}", solMargin, yPos, normalPaint)
-            yPos += 20f
-            canvas.drawText("Toplam Tutar: $formatliTutar TL", solMargin, yPos, altBaslikPaint)
-            yPos += 25f
-
-            // Siparişler arasına ayırıcı çizgi
-            canvas.drawLine(solMargin, yPos, 555f, yPos, cizgiPaint)
-            yPos += 30f
         }
+
+        yPos += 20f
+        canvas.drawLine(solMargin, yPos, 555f, yPos, cizgiPaint)
+        yPos += 30f
+
+        // 6. Genel Toplam
+        val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(siparis.toplamTutar)
+        canvas.drawText("GENEL TOPLAM: $formatliTutar TL", solMargin, yPos, tutarPaint)
 
         pdfDocument.finishPage(page)
 
-        // PDF dosyasını kullanıcının seçtiği yere kaydet
-        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            pdfDocument.writeTo(outputStream)
+        // 7. Dosyayı Telefonun "İndirilenler" Klasörüne Kaydetme
+        try {
+            val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val dosyaAdi = "Irsaliye_${siparis.sirketUnvani.take(5)}_${siparis.siparisId.take(4)}.pdf"
+            val file = File(directory, dosyaAdi)
+
+            pdfDocument.writeTo(FileOutputStream(file))
+            Toast.makeText(context, "İrsaliye indirildi! (İndirilenler Klasörüne bakın)", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(context, "PDF kaydedilemedi: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            pdfDocument.close()
         }
-        pdfDocument.close()
-
-        Toast.makeText(context, "PDF Başarıyla İndirilenlere Kaydedildi!", Toast.LENGTH_LONG).show()
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Toast.makeText(context, "PDF oluşturulurken hata: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
     }
 }

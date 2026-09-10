@@ -1,9 +1,11 @@
-package com.example.toptan.viewmodel
+package com.example.toptan.viewmodel.toptanci
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import com.example.toptan.model.Siparis
 import com.example.toptan.model.Urun
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessaging
@@ -12,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
-import com.example.toptan.model.Siparis
 
 class ToptanciViewModel : ViewModel() {
 
@@ -45,10 +46,20 @@ class ToptanciViewModel : ViewModel() {
     private val _siparislerYukleniyor = MutableStateFlow(true)
     val siparislerYukleniyor: StateFlow<Boolean> = _siparislerYukleniyor
 
+    private val _minSiparisTutari = MutableStateFlow(0.0)
+    val minSiparisTutari: StateFlow<Double> = _minSiparisTutari.asStateFlow()
+
+    private val _enCokSatanUrunler = MutableStateFlow<List<Pair<String, Int>>>(emptyList())
+    val enCokSatanUrunler: StateFlow<List<Pair<String, Int>>> = _enCokSatanUrunler.asStateFlow()
+
+    private val _enIyiMusteriler = MutableStateFlow<List<Pair<String, Double>>>(emptyList())
+    val enIyiMusteriler: StateFlow<List<Pair<String, Double>>> = _enIyiMusteriler.asStateFlow()
+
     init {
         istatistikleriGetir()
         toptanciUrunleriniGetir()
-        siparisleriGetir() // Başlangıçta siparişleri de yükle
+        siparisleriGetir()
+        toptanciAyarlariniGetir()
     }
 
     private fun fcmTokenKaydet() {
@@ -79,6 +90,7 @@ class ToptanciViewModel : ViewModel() {
                     }
                     // En yeni siparişler en üstte görünsün diye tarihe göre sıralıyoruz
                     _toptanciSiparisleri.value = liste.sortedByDescending { it.tarih }
+                    analizleriHesapla(liste)
                     _siparislerYukleniyor.value = false
                 }
             }
@@ -87,6 +99,27 @@ class ToptanciViewModel : ViewModel() {
     fun siparisDurumuGuncelle(siparisId: String, yeniDurum: String) {
         FirebaseFirestore.getInstance().collection("siparisler").document(siparisId)
             .update("durum", yeniDurum)
+    }
+
+    fun siparisIptalEtVeIadeYap(siparis: Siparis) {
+        val batch = firestore.batch()
+
+        // 1. Siparişin durumunu "İptal Edildi" yap
+        val siparisRef = firestore.collection("siparisler").document(siparis.siparisId)
+        batch.update(siparisRef, "durum", "İptal Edildi")
+
+        // 2. Müşterinin cari limitine (kredisine) sipariş tutarını geri ekle (İADE)
+        val musteriRef = firestore.collection("kullanicilar").document(siparis.musteriUid)
+        batch.update(musteriRef, "cariLimit", FieldValue.increment(siparis.toplamTutar))
+
+        // 3. İşlemleri ateşle (İkisi aynı anda hatasız gerçekleşmek zorunda)
+        batch.commit()
+            .addOnSuccessListener {
+                _mesaj.value = "Sipariş iptal edildi ve ${siparis.toplamTutar} ₺ müşteriye iade edildi."
+            }
+            .addOnFailureListener { hata ->
+                _mesaj.value = "İptal işlemi başarısız: ${hata.message}"
+            }
     }
 
     fun istatistikleriGetir() {
@@ -136,13 +169,30 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    fun fiyatGuncelle(urunId: String, yeniFiyat: Double) {
-        firestore.collection("urunler").document(urunId).update("fiyat", yeniFiyat)
+    // --- YENİ EKLENEN GÜNCELLEME FONKSİYONLARI ---
+
+    // Hem fiyatı hem de stoğu aynı anda günceller
+    fun urunGuncelle(urunId: String, yeniFiyat: Double, yeniStok: Int) {
+        val guncelVeriler = mapOf(
+            "fiyat" to yeniFiyat,
+            "stok" to yeniStok
+        )
+
+        firestore.collection("urunler").document(urunId).update(guncelVeriler)
             .addOnSuccessListener {
-                _mesaj.value = "Fiyat başarıyla güncellendi."
+                _mesaj.value = "Ürün bilgileri başarıyla güncellendi."
             }
             .addOnFailureListener {
-                _mesaj.value = "Fiyat güncellenemedi."
+                _mesaj.value = "Güncelleme başarısız oldu."
+            }
+    }
+
+    // Ürünü satışa açar veya kapatır (Aktif / Pasif)
+    fun urunAktiflikDegistir(urunId: String, aktifMi: Boolean) {
+        firestore.collection("urunler").document(urunId).update("aktifMi", aktifMi)
+            .addOnSuccessListener {
+                val durum = if (aktifMi) "satışa açıldı" else "pasife alındı"
+                _mesaj.value = "Ürün başarıyla $durum."
             }
     }
 
@@ -207,6 +257,45 @@ class ToptanciViewModel : ViewModel() {
                 _yukleniyor.value = false
                 _mesaj.value = "Ürün eklenirken bir hata oluştu: ${hata.message}"
             }
+    }
+
+    fun toptanciAyarlariniGetir() {
+        val uid = auth.currentUser?.uid ?: return
+        firestore.collection("kullanicilar").document(uid).addSnapshotListener { snap, _ ->
+            if (snap != null && snap.exists()) {
+                _minSiparisTutari.value = snap.getDouble("minSiparisTutari") ?: 0.0
+            }
+        }
+    }
+
+    fun minSiparisTutariniGuncelle(yeniTutar: Double) {
+        val uid = auth.currentUser?.uid ?: return
+        firestore.collection("kullanicilar").document(uid).update("minSiparisTutari", yeniTutar)
+            .addOnSuccessListener { _mesaj.value = "Minimum sipariş tutarı güncellendi." }
+    }
+
+    // Bu fonksiyonu siparisleriGetir() içindeki SnapshotListener başarılı olduğunda çağır (liste değiştikçe çalışsın)
+    fun analizleriHesapla(siparisler: List<Siparis>) {
+        val gecerliSiparisler = siparisler.filter { it.durum != "İptal Edildi" }
+
+        // 1. En İyi Müşteriler (Ciroya Göre)
+        val musteriCiroMap = gecerliSiparisler.groupBy { it.sirketUnvani }
+            .mapValues { entry -> entry.value.sumOf { it.toplamTutar } }
+        _enIyiMusteriler.value = musteriCiroMap.toList().sortedByDescending { it.second }.take(3)
+
+        // 2. En Çok Satan Ürünler (siparisOzeti parse ediliyor)
+        val urunSatisMap = mutableMapOf<String, Int>()
+        val regex = Regex("(\\d+)x\\s(.*?)(?:,|$)")
+
+        gecerliSiparisler.forEach { siparis ->
+            val matches = regex.findAll(siparis.siparisOzeti)
+            matches.forEach { match ->
+                val adet = match.groupValues[1].toIntOrNull() ?: 0
+                val urunAdi = match.groupValues[2].trim()
+                urunSatisMap[urunAdi] = urunSatisMap.getOrDefault(urunAdi, 0) + adet
+            }
+        }
+        _enCokSatanUrunler.value = urunSatisMap.toList().sortedByDescending { it.second }.take(3)
     }
 
     fun mesajiTemizle() {

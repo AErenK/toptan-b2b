@@ -1,10 +1,10 @@
-package com.example.toptan.viewmodel
+package com.example.toptan.viewmodel.musteri
 
 import androidx.lifecycle.ViewModel
 import com.example.toptan.model.Toptanci
-import com.example.toptan.model.Urun // YENİ: Urun modelini import ettik
+import com.example.toptan.model.Urun
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query // YENİ: Sıralama için gerekli
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

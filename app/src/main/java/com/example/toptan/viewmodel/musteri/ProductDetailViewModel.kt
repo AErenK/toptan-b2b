@@ -1,4 +1,4 @@
-package com.example.toptan.viewmodel
+package com.example.toptan.viewmodel.musteri
 
 import androidx.lifecycle.ViewModel
 import com.example.toptan.model.Urun

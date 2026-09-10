@@ -1,11 +1,12 @@
-package com.example.toptan.viewmodel
+package com.example.toptan.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.google.firebase.messaging.FirebaseMessaging
 
 class AuthViewModel : ViewModel() {
 
@@ -134,7 +135,7 @@ class AuthViewModel : ViewModel() {
                     // Eğer belgede henüz "fcmToken" alanı yoksa update hata verebilir,
                     // o yüzden set(..., SetOptions.merge()) ile de destekleyebiliriz:
                     firestore.collection("kullanicilar").document(userId)
-                        .set(hashMapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
+                        .set(hashMapOf("fcmToken" to token), SetOptions.merge())
                 }
         }
     }

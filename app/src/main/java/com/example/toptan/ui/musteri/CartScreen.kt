@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.toptan.viewmodel.CartViewModel
+import com.example.toptan.viewmodel.musteri.CartViewModel
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
 import java.util.Locale

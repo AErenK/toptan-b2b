@@ -1,5 +1,6 @@
 package com.example.toptan.ui.toptanci
 
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -13,9 +14,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -24,18 +27,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.model.Siparis
-import com.example.toptan.viewmodel.ToptanciViewModel
+import com.example.toptan.utils.PdfHelper
+import com.example.toptan.viewmodel.toptanci.ToptanciViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -43,16 +47,24 @@ fun ToptanciSiparisScreen(
     viewModel: ToptanciViewModel = viewModel(),
     onBackClick: () -> Unit
 ) {
-    // Tüm siparişleri ViewModel'den dinliyoruz
     val tumSiparisler by viewModel.toptanciSiparisleri.collectAsState(initial = emptyList())
     val yukleniyor by viewModel.siparislerYukleniyor.collectAsState(initial = false)
+    val mesaj by viewModel.mesaj.collectAsState()
+    val context = LocalContext.current
 
-    // Sekmeler (Tabs)
-    val sekmeler = listOf("Hazırlanıyor", "Yola Çıkanlar", "Tamamlandı")
-
-    // Pager (Sağa Sola Kaydırma Hareketi İçin)
+    val sekmeler = listOf("Hazırlanıyor", "Yola Çıkanlar", "Tamamlandı / İptal")
     val pagerState = rememberPagerState(pageCount = { sekmeler.size })
     val coroutineScope = rememberCoroutineScope()
+
+    // İptal Onay Penceresi için State
+    var iptalEdilecekSiparis by remember { mutableStateOf<Siparis?>(null) }
+
+    LaunchedEffect(mesaj) {
+        mesaj?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.mesajiTemizle()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -68,7 +80,6 @@ fun ToptanciSiparisScreen(
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // --- TAB ROW (SEKMELER) ---
             TabRow(
                 selectedTabIndex = pagerState.currentPage,
                 containerColor = Color.White,
@@ -88,17 +99,16 @@ fun ToptanciSiparisScreen(
                     Tab(
                         selected = isSelected,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(text = baslik, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = textColor) }
+                        text = { Text(text = baslik, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = textColor, fontSize = 12.sp) }
                     )
                 }
             }
 
-            // --- PAGER İÇERİĞİ (SİPARİŞ LİSTELERİ) ---
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 val filtrelenmisSiparisler = when (page) {
                     0 -> tumSiparisler.filter { it.durum == "Hazırlanıyor" || it.durum == "Yeni" }
                     1 -> tumSiparisler.filter { it.durum == "Yola Çıktı" }
-                    else -> tumSiparisler.filter { it.durum == "Teslim Edildi" || it.durum == "İptal" }
+                    else -> tumSiparisler.filter { it.durum == "Teslim Edildi" || it.durum == "İptal Edildi" }
                 }
 
                 if (yukleniyor) {
@@ -122,9 +132,8 @@ fun ToptanciSiparisScreen(
                         items(filtrelenmisSiparisler) { siparis ->
                             ToptanciSiparisKarti(
                                 siparis = siparis,
-                                onDurumDegistir = { yeniDurum ->
-                                    viewModel.siparisDurumuGuncelle(siparis.siparisId, yeniDurum)
-                                }
+                                onDurumDegistir = { yeniDurum -> viewModel.siparisDurumuGuncelle(siparis.siparisId, yeniDurum) },
+                                onIptalEt = { iptalEdilecekSiparis = siparis }
                             )
                         }
                     }
@@ -132,19 +141,51 @@ fun ToptanciSiparisScreen(
             }
         }
     }
+
+    // YENİ: SİPARİŞ İPTAL ONAY DİALOGU
+    if (iptalEdilecekSiparis != null) {
+        val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(iptalEdilecekSiparis!!.toplamTutar)
+        AlertDialog(
+            onDismissRequest = { iptalEdilecekSiparis = null },
+            title = { Text("Siparişi İptal Et", fontWeight = FontWeight.Bold, color = Color(0xFFEF4444), fontSize = 18.sp) },
+            text = {
+                Text(
+                    "Bu siparişi iptal etmek istediğinize emin misiniz?\n\n" +
+                            "İptal ederseniz sipariş tutarı olan $formatliTutar ₺, müşterinin Cari Limitine anında geri yüklenecektir.",
+                    fontSize = 14.sp, color = Color(0xFF64748B)
+                )
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.siparisIptalEtVeIadeYap(iptalEdilecekSiparis!!)
+                        iptalEdilecekSiparis = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Evet, İptal ve İade Et", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { iptalEdilecekSiparis = null }) { Text("Vazgeç", color = Color(0xFF64748B), fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
 }
 
 @Composable
-fun ToptanciSiparisKarti(siparis: Siparis, onDurumDegistir: (String) -> Unit) {
+fun ToptanciSiparisKarti(siparis: Siparis, onDurumDegistir: (String) -> Unit, onIptalEt: () -> Unit) {
     val formatliTutar = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(siparis.toplamTutar)
     val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR"))
     val tarihTemsili = tarihFormat.format(Date(siparis.tarih))
+    val context = LocalContext.current
 
-    // Duruma göre görsel renkler
     val (durumRengi, arkaPlanRenk, durumIkonu) = when (siparis.durum) {
         "Hazırlanıyor", "Yeni" -> Triple(Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.Schedule)
         "Yola Çıktı" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), Icons.Default.LocalShipping)
         "Teslim Edildi" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), Icons.Default.CheckCircle)
+        "İptal Edildi" -> Triple(Color(0xFFEF4444), Color(0xFFFEF2F2), Icons.Default.Cancel)
         else -> Triple(Color(0xFF64748B), Color(0xFFF1F5F9), Icons.Default.CheckCircle)
     }
 
@@ -190,46 +231,68 @@ fun ToptanciSiparisKarti(siparis: Siparis, onDurumDegistir: (String) -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Surface(color = Color(0xFFF8FAFC), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = siparis.siparisOzeti,
-                    fontSize = 13.sp, color = Color(0xFF475569), lineHeight = 18.sp,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Text(text = siparis.siparisOzeti, fontSize = 13.sp, color = Color(0xFF475569), lineHeight = 18.sp, modifier = Modifier.padding(12.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. ALT: Toplam Tutar ve AKSİYON BUTONU
+            // 3. ALT: Tutar ve Aksiyon Butonları
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("Sipariş Tutarı", fontSize = 11.sp, color = Color(0xFF64748B))
-                    Text("$formatliTutar ₺", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF2563EB))
+                    Text(
+                        text = "$formatliTutar ₺",
+                        fontWeight = FontWeight.ExtraBold, fontSize = 18.sp,
+                        // İptal edildiyse üstünü çiz
+                        textDecoration = if (siparis.durum == "İptal Edildi") androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                        color = if (siparis.durum == "İptal Edildi") Color(0xFF94A3B8) else Color(0xFF2563EB)
+                    )
                 }
 
-                // Siparişin durumuna göre dinamik buton gösterimi
-                when (siparis.durum) {
-                    "Hazırlanıyor", "Yeni" -> {
-                        Button(
-                            onClick = { onDurumDegistir("Yola Çıktı") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+
+                    // Sadece iptal edilmemiş siparişler için PDF İndirme ve Diğer Aksiyonlar
+                    if (siparis.durum != "İptal Edildi") {
+                        IconButton(
+                            onClick = { PdfHelper.siparisPdfOlustur(context, siparis) },
+                            modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
                         ) {
-                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Kargoya Ver", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
                         }
-                    }
-                    "Yola Çıktı" -> {
-                        Button(
-                            onClick = { onDurumDegistir("Teslim Edildi") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Teslim Edildi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                        when (siparis.durum) {
+                            "Hazırlanıyor", "Yeni" -> {
+                                // YENİ: İPTAL BUTONU
+                                IconButton(
+                                    onClick = onIptalEt,
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Cancel, contentDescription = "İptal Et", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                                }
+
+                                Button(
+                                    onClick = { onDurumDegistir("Yola Çıktı") },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Kargoya Ver", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            "Yola Çıktı" -> {
+                                Button(
+                                    onClick = { onDurumDegistir("Teslim Edildi") },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Teslim Edildi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }

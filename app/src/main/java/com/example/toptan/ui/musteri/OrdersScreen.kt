@@ -1,7 +1,5 @@
 package com.example.toptan.ui.musteri
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,12 +27,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.toptan.model.Siparis
-import com.example.toptan.utils.createPdf // Kendi PDF fonksiyonunu import ettiğinden emin ol!
-import com.example.toptan.viewmodel.MusteriSiparisViewModel
+import com.example.toptan.viewmodel.musteri.MusteriSiparisViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.toptan.utils.PdfHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,16 +41,6 @@ fun OrdersScreen(
 ) {
     val siparisler by viewModel.siparisler.collectAsState()
     val yukleniyor by viewModel.yukleniyor.collectAsState()
-    val context = LocalContext.current
-
-    // PDF Kaydetme Penceresini Tetikleyen Launcher
-    val pdfLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri ->
-        if (uri != null) {
-            createPdf(context, uri, siparisler)
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -72,23 +60,6 @@ fun OrdersScreen(
                                 color = Color(0xFF64748B),
                                 fontWeight = FontWeight.Medium
                             )
-                        }
-                    }
-                },
-                actions = {
-                    // YENİ: PDF Fatura İndirme Butonu
-                    if (siparisler.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                val defaultFileName = "Gecmis_Siparislerim_${System.currentTimeMillis()}.pdf"
-                                pdfLauncher.launch(defaultFileName)
-                            },
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(38.dp)
-                                .background(Color(0xFFF3E8FF), shape = CircleShape)
-                        ) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Çıktısı Al", tint = Color(0xFF9333EA), modifier = Modifier.size(18.dp))
                         }
                     }
                 },
@@ -167,6 +138,9 @@ fun MusteriSiparisKarti(siparis: Siparis) {
     val tarihFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR"))
     val tarihTemsili = tarihFormat.format(Date(siparis.tarih))
 
+    // PDF çıktısı için Context'i kartın içinde alıyoruz
+    val context = LocalContext.current
+
     val (durumRengi, arkaPlanRenk, durumIkonu) = when (siparis.durum) {
         "Hazırlanıyor" -> Triple(Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.Schedule)
         "Yola Çıktı" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), Icons.Default.LocalShipping)
@@ -221,7 +195,7 @@ fun MusteriSiparisKarti(siparis: Siparis) {
             HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. YENİ: Fatura/Şirket Bilgileri (Eğer kayıtlıysa gösterir)
+            // 2. Fatura/Şirket Bilgileri
             if (siparis.sirketUnvani.isNotEmpty() && siparis.sirketUnvani != "Belirtilmemiş Şirket") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
@@ -253,7 +227,7 @@ fun MusteriSiparisKarti(siparis: Siparis) {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 4. Alt Kısım: Toplam Tutar
+            // 4. Alt Kısım: PDF Butonu ve Toplam Tutar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -265,12 +239,23 @@ fun MusteriSiparisKarti(siparis: Siparis) {
                     color = Color(0xFF64748B),
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = "$formatliTutar ₺",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    color = Color(0xFF2563EB)
-                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // PDF İNDİR BUTONU
+                    IconButton(
+                        onClick = { PdfHelper.siparisPdfOlustur(context, siparis) },
+                        modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Fatura İndir", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "$formatliTutar ₺",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF2563EB)
+                    )
+                }
             }
         }
     }

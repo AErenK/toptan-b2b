@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.toptan.model.Urun
-import com.example.toptan.viewmodel.HomeViewModel
+import com.example.toptan.viewmodel.musteri.HomeViewModel
 import java.text.NumberFormat
 import java.util.Locale
 

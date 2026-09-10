@@ -1,4 +1,4 @@
-package com.example.toptan.viewmodel
+package com.example.toptan.viewmodel.musteri
 
 import androidx.lifecycle.ViewModel
 import com.example.toptan.model.Siparis
@@ -7,13 +7,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class ToptanciSiparisViewModel : ViewModel() {
+class MusteriSiparisViewModel : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    private val _gelenSiparisler = MutableStateFlow<List<Siparis>>(emptyList())
-    val gelenSiparisler: StateFlow<List<Siparis>> = _gelenSiparisler
+    private val _siparisler = MutableStateFlow<List<Siparis>>(emptyList())
+    val siparisler: StateFlow<List<Siparis>> = _siparisler
 
     private val _yukleniyor = MutableStateFlow(true)
     val yukleniyor: StateFlow<Boolean> = _yukleniyor
@@ -23,10 +23,11 @@ class ToptanciSiparisViewModel : ViewModel() {
     }
 
     private fun siparisleriGetir() {
-        val aktifToptanciId = auth.currentUser?.uid ?: return
+        val aktifMusteriEmail = auth.currentUser?.email ?: return
 
+        // Sadece bu müşteriye (email'e) ait siparişleri gerçek zamanlı dinliyoruz
         firestore.collection("siparisler")
-            .whereEqualTo("toptanciId", aktifToptanciId)
+            .whereEqualTo("musteriEmail", aktifMusteriEmail)
             .addSnapshotListener { snapshot, hata ->
                 if (hata != null || snapshot == null) {
                     _yukleniyor.value = false
@@ -35,20 +36,10 @@ class ToptanciSiparisViewModel : ViewModel() {
 
                 val liste = snapshot.documents
                     .mapNotNull { it.toObject(Siparis::class.java) }
-                    .sortedByDescending { it.tarih }
+                    .sortedByDescending { it.tarih } // En yeni sipariş en üstte görünsün
 
-                _gelenSiparisler.value = liste
+                _siparisler.value = liste
                 _yukleniyor.value = false
-            }
-    }
-
-    fun siparisDurumuGuncelle(siparisId: String, yeniDurum: String) {
-        FirebaseFirestore.getInstance().collection("siparisler").document(siparisId)
-            .update("durum", yeniDurum)
-            .addOnSuccessListener {
-                // Eğer siparişleri dinleyen bir SnapshotListener kullanıyorsan liste otomatik güncellenir.
-                // Kullanmıyorsan burada siparişleri yeniden getiren fonksiyonunu çağır:
-                // siparisleriGetir()
             }
     }
 }
