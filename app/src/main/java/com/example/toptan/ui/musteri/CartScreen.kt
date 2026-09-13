@@ -46,6 +46,8 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
     val toplamTutar by viewModel.toplamTutar.collectAsState()
     val siparisMesaji by viewModel.siparisMesaji.collectAsState()
     val siparisBasarili by viewModel.siparisBasarili.collectAsState()
+    val toptanciMinLimit by viewModel.toptanciMinLimit.collectAsState()
+    val iskontoOrani by viewModel.iskontoOrani.collectAsState()
 
     LaunchedEffect(siparisMesaji) {
         if (siparisMesaji != null) {
@@ -123,7 +125,8 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
                         }
 
                         CheckoutBar(
-                            totalPrice = "$formatliToplam ₺",
+                            totalPrice = toplamTutar,
+                            minLimit = toptanciMinLimit,
                             onCheckoutClick = {
                                 val siparisOzeti = sepetListesi.joinToString(", ") {
                                     "${it.secilenMiktar}x ${it.urun.ad}"
@@ -195,12 +198,19 @@ fun CartScreen(viewModel: CartViewModel = viewModel()) {
                             items = sepetListesi,
                             key = { oge -> oge.urun.id }
                         ) { oge ->
-                            val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(oge.urun.fiyat)
+                            val indirimliFiyat = oge.urun.fiyat * (1 - (iskontoOrani / 100.0))
+                            val formatliBirimFiyat = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR")).format(indirimliFiyat)
+
+                            val fiyatMetni = if (iskontoOrani > 0.0) {
+                                "$formatliBirimFiyat ₺ (VIP İndirimli)"
+                            } else {
+                                "$formatliBirimFiyat ₺"
+                            }
 
                             CartItemCard(
                                 productName = oge.urun.ad,
                                 minOrderText = "Min. Alım: ${oge.urun.minAlimMiktari} Adet",
-                                price = "$formatliBirimFiyat ₺",
+                                price = fiyatMetni, // YENİ FORMATLI FİYATI BURAYA VERDİK
                                 quantity = oge.secilenMiktar,
                                 imageUrl = oge.urun.gorselUrl,
                                 onIncrease = { viewModel.miktarArtir(oge.urun.id) },
@@ -388,35 +398,63 @@ fun CartItemCard(
     }
 }
 
-// SEPET ALT ÖDEME ÇUBUĞU (Checkout Bar)
 @Composable
-fun CheckoutBar(totalPrice: String, onCheckoutClick: () -> Unit) {
+fun CheckoutBar(totalPrice: Double, minLimit: Double, onCheckoutClick: () -> Unit) {
+    val formatliToplam = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(totalPrice)
+
+    // YENİ: İlerleme Hesaplaması
+    val progress = if (minLimit > 0) (totalPrice / minLimit).coerceIn(0.0, 1.0).toFloat() else 1f
+    val kalan = if (minLimit > totalPrice) minLimit - totalPrice else 0.0
+    val formatliKalan = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(kalan)
+    val isReady = progress >= 1f
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
-        color = Color.White,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp,
+        color = Color.White, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(text = "Genel Toplam", fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = totalPrice, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Color(0xFF1E293B))
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            // YENİ: Progress Bar Alanı
+            if (minLimit > 0) {
+                Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFF8FAFC)).padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    Column {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                text = if (isReady) "🎉 Harika! Minimum limiti aştınız." else "Siparişi tamamlamak için $formatliKalan ₺ eksik",
+                                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isReady) Color(0xFF16A34A) else Color(0xFFD97706)
+                            )
+                            Text(text = "%${(progress * 100).toInt()}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isReady) Color(0xFF16A34A) else Color(0xFFD97706))
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
+                            color = if (isReady) Color(0xFF16A34A) else Color(0xFFD97706),
+                            trackColor = Color(0xFFE2E8F0)
+                        )
+                    }
+                }
             }
-            Button(
-                onClick = onCheckoutClick,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Siparişi Tamamla", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Column {
+                    Text(text = "Genel Toplam", fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(text = "$formatliToplam ₺", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Color(0xFF1E293B))
+                }
+                Button(
+                    onClick = onCheckoutClick,
+                    enabled = isReady,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A), disabledContainerColor = Color(0xFF94A3B8)),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(if (isReady) "Siparişi Tamamla" else "Limit Yetersiz", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

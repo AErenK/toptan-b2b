@@ -169,9 +169,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // --- YENİ EKLENEN GÜNCELLEME FONKSİYONLARI ---
-
-    // Hem fiyatı hem de stoğu aynı anda günceller
     fun urunGuncelle(urunId: String, yeniFiyat: Double, yeniStok: Int) {
         val guncelVeriler = mapOf(
             "fiyat" to yeniFiyat,
@@ -187,7 +184,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // Ürünü satışa açar veya kapatır (Aktif / Pasif)
     fun urunAktiflikDegistir(urunId: String, aktifMi: Boolean) {
         firestore.collection("urunler").document(urunId).update("aktifMi", aktifMi)
             .addOnSuccessListener {
@@ -196,7 +192,6 @@ class ToptanciViewModel : ViewModel() {
             }
     }
 
-    // Ürün Ekleme (Storage Entegrasyonlu)
     fun urunEkle(urunAdi: String, fiyatStr: String, minAlimStr: String, stokStr: String, kategori: String, gorselUri: Uri?) {
         val fiyat = fiyatStr.toDoubleOrNull()
         val minAlim = minAlimStr.toIntOrNull()
@@ -274,7 +269,6 @@ class ToptanciViewModel : ViewModel() {
             .addOnSuccessListener { _mesaj.value = "Minimum sipariş tutarı güncellendi." }
     }
 
-    // Bu fonksiyonu siparisleriGetir() içindeki SnapshotListener başarılı olduğunda çağır (liste değiştikçe çalışsın)
     fun analizleriHesapla(siparisler: List<Siparis>) {
         val gecerliSiparisler = siparisler.filter { it.durum != "İptal Edildi" }
 
@@ -296,6 +290,58 @@ class ToptanciViewModel : ViewModel() {
             }
         }
         _enCokSatanUrunler.value = urunSatisMap.toList().sortedByDescending { it.second }.take(3)
+    }
+
+    fun topluUrunEkle(csvSatirlari: List<String>) {
+        _yukleniyor.value = true
+        val toptanciId = auth.currentUser?.uid ?: return
+        val batch = firestore.batch()
+        var basariliSayi = 0
+
+        for (satir in csvSatirlari) {
+            if (satir.isBlank() || satir.contains("Ad,Fiyat", ignoreCase = true)) continue
+
+            val sutunlar = satir.split(",")
+            if (sutunlar.size >= 5) {
+                val ad = sutunlar[0].trim().replace("\uFEFF", "").replace("\"", "")
+                val fiyat = sutunlar[1].trim().replace("\"", "").toDoubleOrNull() ?: 0.0
+                val minAlim = sutunlar[2].trim().replace("\"", "").toIntOrNull() ?: 1
+                val stok = sutunlar[3].trim().replace("\"", "").toIntOrNull() ?: 0
+                val kategori = sutunlar[4].trim().replace("\"", "")
+                val gorselUrl = if (sutunlar.size >= 6) sutunlar[5].trim().replace("\"", "") else ""
+
+                val yeniUrunRef = firestore.collection("urunler").document()
+                val urunMap = hashMapOf(
+                    "id" to yeniUrunRef.id,
+                    "toptanciId" to toptanciId,
+                    "ad" to ad,
+                    "fiyat" to fiyat,
+                    "minAlimMiktari" to minAlim,
+                    "stok" to stok,
+                    "kategori" to kategori,
+                    "gorselUrl" to gorselUrl,
+                    "eklenmeTarihi" to System.currentTimeMillis(),
+                    "aktifMi" to true
+                )
+                batch.set(yeniUrunRef, urunMap)
+                basariliSayi++
+            }
+        }
+
+        if (basariliSayi > 0) {
+            batch.commit()
+                .addOnSuccessListener {
+                    _yukleniyor.value = false
+                    _mesaj.value = "$basariliSayi ürün sisteminize başarıyla işlendi! (başarılı)"
+                }
+                .addOnFailureListener {
+                    _yukleniyor.value = false
+                    _mesaj.value = "Toplu yükleme başarısız: ${it.message}"
+                }
+        } else {
+            _yukleniyor.value = false
+            _mesaj.value = "Dosya formatı hatalı. (Sütunlar: Ad,Fiyat,MinAlim,Stok,Kategori)"
+        }
     }
 
     fun mesajiTemizle() {

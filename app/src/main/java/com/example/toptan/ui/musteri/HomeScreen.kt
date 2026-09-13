@@ -33,7 +33,8 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToCatalog: (String) -> Unit
+    onNavigateToCatalog: (String) -> Unit,
+    onNavigateToProduct: (String) -> Unit
 ) {
     val toptanciListesi by viewModel.toptancilar.collectAsState()
     val yeniGelenUrunler by viewModel.yeniGelenler.collectAsState()
@@ -41,7 +42,6 @@ fun HomeScreen(
     var aramaMetni by remember { mutableStateOf("") }
     var secilenKategori by remember { mutableStateOf("Tümü") }
 
-    // Çalışan mantığı bozmadan filtreleme opsiyonu ekledik
     val filtrelenmisToptancılar = remember(toptanciListesi, aramaMetni) {
         if (aramaMetni.isBlank()) toptanciListesi
         else toptanciListesi.filter { it.ad.contains(aramaMetni, ignoreCase = true) }
@@ -52,7 +52,6 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
     ) {
-        // Üst kısma hafif modern bir gradyan dokunuşu (Premium Hissiyat)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,7 +69,6 @@ fun HomeScreen(
                 .padding(top = 16.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                // Karşılama ve Başlık
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -95,7 +93,6 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Modern Arama Çubuğu (Çalışması birebir korunuyor)
                 OutlinedTextField(
                     value = aramaMetni,
                     onValueChange = { aramaMetni = it },
@@ -119,7 +116,6 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Kategori Çipleri (İşlevselliği korundu, tasarımı keskinleştirildi)
             val categories = listOf("Tümü", "Gıda", "Tekstil", "Elektronik", "Ambalaj", "Temizlik")
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -150,7 +146,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // --- YENİ GELENLER VİTRİNİ (Özenle cilalandı) ---
             if (yeniGelenUrunler.isNotEmpty()) {
                 Row(
                     modifier = Modifier
@@ -182,13 +177,12 @@ fun HomeScreen(
                         val urun = yeniGelenUrunler[index]
                         YeniGelenUrunKarti(
                             urun = urun,
-                            onClick = { onNavigateToCatalog(urun.toptanciId) }
+                            onClick = { onNavigateToProduct(urun.id) }
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
             }
-            // --- VİTRİN BİTİŞ ---
 
             Text(
                 text = "Öne Çıkan Toptancılar",
@@ -202,7 +196,7 @@ fun HomeScreen(
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(filtrelenmisToptancılar.size) { index ->
                     val toptanci = filtrelenmisToptancılar[index]
@@ -221,7 +215,6 @@ fun HomeScreen(
     }
 }
 
-// VİTRİN ÜRÜN KARTI (Daha modern gölgelendirme, oranlar ve etiketler)
 @Composable
 fun YeniGelenUrunKarti(urun: Urun, onClick: () -> Unit) {
     Card(
@@ -251,7 +244,6 @@ fun YeniGelenUrunKarti(urun: Urun, onClick: () -> Unit) {
                     }
                 }
 
-                // Min alım miktarı için şık şeffaf rozet
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -289,7 +281,6 @@ fun YeniGelenUrunKarti(urun: Urun, onClick: () -> Unit) {
     }
 }
 
-// TOPTANCI KARTI (Özenle tasarlanmış şık rozetler ve hover hissi)
 @Composable
 fun WholesalerCard(name: String, minOrder: String, ayniGunKargo: Boolean, onayliMi: Boolean, onCatalogClick: () -> Unit) {
     Card(
@@ -354,7 +345,6 @@ fun WholesalerCard(name: String, minOrder: String, ayniGunKargo: Boolean, onayli
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Sağ ok ikonunu şık bir çember içine aldık
             Box(
                 modifier = Modifier
                     .size(36.dp)

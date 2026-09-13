@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthViewModel : ViewModel() {
-
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
@@ -19,10 +18,13 @@ class AuthViewModel : ViewModel() {
     private val _kullaniciRolu = MutableStateFlow<String?>(null)
     val kullaniciRolu: StateFlow<String?> = _kullaniciRolu
 
+    // YENİ: Alt Personel Yetkilendirmesi İçin State
+    private val _altRol = MutableStateFlow<String?>("patron")
+    val altRol: StateFlow<String?> = _altRol
+
     init {
         auth.currentUser?.let { kullanici ->
             roluGetir(kullanici.uid)
-            // Uygulama açıkken oturum varsa token'ı da güncel tutalım
             fcmTokenGuncelle()
         }
     }
@@ -30,134 +32,77 @@ class AuthViewModel : ViewModel() {
     fun kayitOl(email: String, sifre: String, rol: String, sirketUnvani: String, vergiDairesi: String, vergiNo: String, adres: String, yetkiliKisi: String, telefon: String) {
         val temizEmail = email.trim()
         val temizSifre = sifre.trim()
-        val temizSirketUnvani = sirketUnvani.trim()
-        val temizVergiDairesi = vergiDairesi.trim()
-        val temizVergiNo = vergiNo.trim()
-        val temizAdres = adres.trim()
-        val temizYetkili = yetkiliKisi.trim()
-        val temizTelefon = telefon.trim()
+        if (temizEmail.isEmpty() || temizSifre.isEmpty()) return
 
-        if (temizEmail.isEmpty() || temizSifre.isEmpty() || temizSirketUnvani.isEmpty() ||
-            temizVergiDairesi.isEmpty() || temizVergiNo.isEmpty() || temizAdres.isEmpty() ||
-            temizYetkili.isEmpty() || temizTelefon.isEmpty()) {
-            _mesaj.value = "Lütfen tüm firma ve iletişim bilgilerini eksiksiz doldurun."
-            return
-        }
-
-        auth.createUserWithEmailAndPassword(temizEmail, temizSifre)
-            .addOnSuccessListener { sonuc ->
-                val uid = sonuc.user?.uid
-                if (uid != null) {
-                    val kullaniciVerisi = hashMapOf(
-                        "email" to temizEmail,
-                        "rol" to rol,
-                        "sirketUnvani" to temizSirketUnvani,
-                        "vergiDairesi" to temizVergiDairesi,
-                        "vergiNo" to temizVergiNo,
-                        "adres" to temizAdres,
-                        "yetkiliKisi" to temizYetkili, // YENİ
-                        "telefon" to temizTelefon,     // YENİ
-                        "kayitTarihi" to System.currentTimeMillis()
-                    )
-
-                    firestore.collection("kullanicilar").document(uid).set(kullaniciVerisi)
-                        .addOnSuccessListener {
-                            _mesaj.value = "Kayıt başarılı! Yönlendiriliyorsunuz..."
-                            _kullaniciRolu.value = rol
-                            fcmTokenGuncelle()
-                        }
-                        .addOnFailureListener {
-                            _mesaj.value = "Şirket bilgileri veritabanına kaydedilemedi."
-                        }
+        auth.createUserWithEmailAndPassword(temizEmail, temizSifre).addOnSuccessListener { sonuc ->
+            val uid = sonuc.user?.uid
+            if (uid != null) {
+                val kullaniciVerisi = hashMapOf(
+                    "email" to temizEmail,
+                    "rol" to rol,
+                    "altRol" to "patron", // Sisteme ilk kayıt olan daima Patrondur
+                    "sirketUnvani" to sirketUnvani.trim(),
+                    "vergiDairesi" to vergiDairesi.trim(),
+                    "vergiNo" to vergiNo.trim(),
+                    "adres" to adres.trim(),
+                    "yetkiliKisi" to yetkiliKisi.trim(),
+                    "telefon" to telefon.trim(),
+                    "kayitTarihi" to System.currentTimeMillis()
+                )
+                firestore.collection("kullanicilar").document(uid).set(kullaniciVerisi).addOnSuccessListener {
+                    _kullaniciRolu.value = rol
+                    _altRol.value = "patron"
+                    fcmTokenGuncelle()
                 }
             }
-            .addOnFailureListener { hata ->
-                _mesaj.value = hata.message ?: "Kayıt işlemi başarısız."
-            }
+        }.addOnFailureListener { _mesaj.value = it.message }
     }
 
     fun girisYap(email: String, sifre: String) {
         val temizEmail = email.trim()
         val temizSifre = sifre.trim()
+        if (temizEmail.isEmpty() || temizSifre.isEmpty()) return
 
-        if (temizEmail.isEmpty() || temizSifre.isEmpty()) {
-            _mesaj.value = "Lütfen tüm alanları doldurun."
-            return
-        }
-
-        auth.signInWithEmailAndPassword(temizEmail, temizSifre)
-            .addOnSuccessListener { sonuc ->
-                val uid = sonuc.user?.uid
-                if (uid != null) {
-                    roluGetir(uid)
-                    // Giriş yapan kullanıcının token'ını güncelleyelim ki bildirimler sorunsuz gitsin
-                    fcmTokenGuncelle()
-                }
+        auth.signInWithEmailAndPassword(temizEmail, temizSifre).addOnSuccessListener { sonuc ->
+            sonuc.user?.uid?.let {
+                roluGetir(it)
+                fcmTokenGuncelle()
             }
-            .addOnFailureListener { hata ->
-                _mesaj.value = hata.message ?: "Giriş başarısız."
-            }
+        }.addOnFailureListener { _mesaj.value = it.message }
     }
 
     private fun roluGetir(uid: String) {
-        firestore.collection("kullanicilar").document(uid).get()
-            .addOnSuccessListener { belge ->
-                if (belge.exists()) {
-                    val rol = belge.getString("rol") ?: "musteri"
-                    _mesaj.value = "Giriş başarılı!"
-                    _kullaniciRolu.value = rol
-                } else {
-                    _mesaj.value = "Kullanıcı profili bulunamadı."
-                    cikisYap()
-                }
+        firestore.collection("kullanicilar").document(uid).get().addOnSuccessListener { belge ->
+            if (belge.exists()) {
+                _kullaniciRolu.value = belge.getString("rol") ?: "musteri"
+                // YENİ: Firebase'den alt rolü çekiyoruz (Yoksa patron kabul edilir)
+                _altRol.value = belge.getString("altRol") ?: "patron"
+            } else {
+                cikisYap()
             }
-            .addOnFailureListener {
-                _mesaj.value = "Kullanıcı bilgileri alınamadı."
-            }
+        }
     }
 
     fun fcmTokenGuncelle() {
         val userId = auth.currentUser?.uid ?: return
-
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                return@addOnCompleteListener
+            if (task.isSuccessful) {
+                firestore.collection("kullanicilar").document(userId)
+                    .set(hashMapOf("fcmToken" to task.result), SetOptions.merge())
             }
-
-            val token = task.result
-
-            firestore.collection("kullanicilar").document(userId)
-                .update("fcmToken", token)
-                .addOnSuccessListener {
-                    println("FCM Token güncellendi: $token")
-                }
-                .addOnFailureListener {
-                    // Eğer belgede henüz "fcmToken" alanı yoksa update hata verebilir,
-                    // o yüzden set(..., SetOptions.merge()) ile de destekleyebiliriz:
-                    firestore.collection("kullanicilar").document(userId)
-                        .set(hashMapOf("fcmToken" to token), SetOptions.merge())
-                }
         }
     }
 
     fun sifreSifirla(email: String) {
-        val temizEmail = email.trim()
-        if (temizEmail.isEmpty()) {
-            _mesaj.value = "Lütfen e-posta adresinizi girin."
-            return
+        if (email.isBlank()) return
+        auth.sendPasswordResetEmail(email.trim()).addOnSuccessListener {
+            _mesaj.value = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! (başarılı)"
         }
-
-        auth.sendPasswordResetEmail(temizEmail)
-            .addOnSuccessListener {
-                _mesaj.value = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! (başarılı)"
-            }
-            .addOnFailureListener { hata ->
-                _mesaj.value = "Hata: ${hata.message}"
-            }
     }
 
     fun cikisYap() {
         auth.signOut()
         _kullaniciRolu.value = null
+        _altRol.value = null
     }
 }

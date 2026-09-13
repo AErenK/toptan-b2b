@@ -7,7 +7,6 @@ import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.toptan.model.Urun
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.asStateFlow
 
 data class SepetOgesi(val urun: Urun, var secilenMiktar: Int)
@@ -28,21 +27,30 @@ class CartViewModel : ViewModel() {
     private val _siparisBasarili = MutableStateFlow(false)
     val siparisBasarili: StateFlow<Boolean> = _siparisBasarili.asStateFlow()
 
-    // YENİ: Müşterinin İskonto Oranı
     private val _iskontoOrani = MutableStateFlow(0.0)
     val iskontoOrani: StateFlow<Double> = _iskontoOrani.asStateFlow()
+
+    private val _toptanciMinLimit = MutableStateFlow(0.0)
+    val toptanciMinLimit: StateFlow<Double> = _toptanciMinLimit.asStateFlow()
 
     init {
         kullaniciBilgileriniDinle()
     }
 
-    // YENİ: Müşterinin iskonto oranını Firebase'den anlık dinliyoruz
     private fun kullaniciBilgileriniDinle() {
         val uid = auth.currentUser?.uid ?: return
         firestore.collection("kullanicilar").document(uid).addSnapshotListener { snap, _ ->
             if (snap != null && snap.exists()) {
                 _iskontoOrani.value = snap.getDouble("iskontoOrani") ?: 0.0
-                hesaplaToplamTutar() // İskonto değişirse sepetteki toplam tutarı anında yeniden hesapla
+                hesaplaToplamTutar()
+            }
+        }
+    }
+
+    private fun toptanciKuraliniGetir(toptanciId: String) {
+        firestore.collection("kullanicilar").document(toptanciId).get().addOnSuccessListener { snap ->
+            if (snap.exists()) {
+                _toptanciMinLimit.value = snap.getDouble("minSiparisTutari") ?: 0.0
             }
         }
     }
@@ -50,7 +58,9 @@ class CartViewModel : ViewModel() {
     fun sepeteEkle(urun: Urun) {
         val mevcutListe = _sepet.value.toMutableList()
 
-        if (mevcutListe.isNotEmpty()) {
+        if (mevcutListe.isEmpty()) {
+            toptanciKuraliniGetir(urun.toptanciId)
+        } else {
             val sepettekiToptanciId = mevcutListe.first().urun.toptanciId
             if (urun.toptanciId != sepettekiToptanciId) {
                 _siparisMesaji.value = "Sepetinizde farklı bir toptancıya ait ürün var. Lütfen önce mevcut sepetinizi temizleyin."
@@ -103,7 +113,6 @@ class CartViewModel : ViewModel() {
         hesaplaToplamTutar()
     }
 
-    // YENİ: Toplam tutarı hesaplarken İskonto Oranını da denkleme katıyoruz
     private fun hesaplaToplamTutar() {
         val oran = _iskontoOrani.value
         _toplamTutar.value = _sepet.value.sumOf {
@@ -125,84 +134,117 @@ class CartViewModel : ViewModel() {
             return
         }
 
-        _siparisMesaji.value = "Toptancı kuralları kontrol ediliyor..."
+        val limit = _toptanciMinLimit.value
+        if (toplamTutar < limit) {
+            _siparisMesaji.value = "Hata: Bu toptancının minimum sipariş limiti $limit ₺'dir."
+            return
+        }
 
-        firestore.collection("kullanicilar").document(toptanciId).get().addOnSuccessListener { toptanciSnap ->
-            val minSiparisTutari = toptanciSnap.getDouble("minSiparisTutari") ?: 0.0
+        _siparisMesaji.value = "Cari limitiniz kontrol ediliyor..."
+        val kullaniciRef = firestore.collection("kullanicilar").document(aktifKullanici.uid)
 
-            if (toplamTutar < minSiparisTutari) {
-                _siparisMesaji.value = "Hata: Bu toptancının minimum sipariş limiti $minSiparisTutari ₺'dir."
+        kullaniciRef.get().addOnSuccessListener { snapshot ->
+            val mevcutLimit = if (snapshot.exists() && snapshot.contains("cariLimit")) {
+                snapshot.getDouble("cariLimit") ?: 50000.0
+            } else {
+                50000.0
+            }
+
+            if (toplamTutar > mevcutLimit) {
+                _siparisMesaji.value = "Hata: Cari limitiniz yetersiz! (Kalan Limit: $mevcutLimit ₺)"
                 return@addOnSuccessListener
             }
 
-            _siparisMesaji.value = "Cari limitiniz kontrol ediliyor..."
-            val kullaniciRef = firestore.collection("kullanicilar").document(aktifKullanici.uid)
+            _siparisMesaji.value = "Siparişiniz işleniyor..."
+            val batch = firestore.batch()
 
-            kullaniciRef.get().addOnSuccessListener { snapshot ->
-                val mevcutLimit = if (snapshot.exists() && snapshot.contains("cariLimit")) {
-                    snapshot.getDouble("cariLimit") ?: 50000.0
+            batch.update(kullaniciRef, "cariLimit", FieldValue.increment(-toplamTutar))
+
+            val siparisRef = firestore.collection("siparisler").document()
+            val yeniSiparis = hashMapOf(
+                "siparisId" to siparisRef.id,
+                "musteriUid" to aktifKullanici.uid,
+                "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
+                "sirketUnvani" to (snapshot.getString("sirketUnvani") ?: "Belirtilmemiş Şirket"),
+                "teslimatAdresi" to (snapshot.getString("adres") ?: "Adres Belirtilmemiş"),
+                "vergiNo" to (snapshot.getString("vergiNo") ?: "-"),
+                "vergiDairesi" to (snapshot.getString("vergiDairesi") ?: "-"),
+                "yetkiliKisi" to (snapshot.getString("yetkiliKisi") ?: "Belirtilmemiş"),
+                "telefon" to (snapshot.getString("telefon") ?: "Belirtilmemiş"),
+                "toptanciId" to toptanciId,
+                "siparisOzeti" to sepetOzet,
+                "toplamTutar" to toplamTutar,
+                "uygulananIskonto" to _iskontoOrani.value,
+                "durum" to "Hazırlanıyor",
+                "tarih" to System.currentTimeMillis()
+            )
+            batch.set(siparisRef, yeniSiparis)
+
+            for (oge in _sepet.value) {
+                val urunRef = firestore.collection("urunler").document(oge.urun.id)
+                batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
+            }
+
+            batch.commit().addOnSuccessListener {
+                _siparisBasarili.value = true
+                _siparisMesaji.value = "Siparişiniz Açık Hesabınıza (Cari) işlenerek onaylandı."
+                sepetiTemizle()
+            }.addOnFailureListener { hata ->
+                _siparisMesaji.value = "Sipariş tamamlanırken hata oluştu: ${hata.message}"
+            }
+        }.addOnFailureListener { _siparisMesaji.value = "Kullanıcı bilgileri alınamadı." }
+    }
+
+    fun gecmisSiparisiTekrarla(siparisOzeti: String, toptanciId: String, onSuccess: () -> Unit) {
+        _siparisMesaji.value = "Ürünlerin güncel durumları kontrol ediliyor..."
+        firestore.collection("urunler")
+            .whereEqualTo("toptanciId", toptanciId)
+            .whereEqualTo("aktifMi", true)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val guncelUrunler = snapshot.documents.mapNotNull { it.toObject(Urun::class.java)?.copy(id = it.id) }
+                val yeniSepet = mutableListOf<SepetOgesi>()
+                var bulunamayanUrunler = false
+
+                val regex = Regex("(\\d+)x\\s(.*?)(?:,|$)")
+                val matches = regex.findAll(siparisOzeti)
+
+                for (match in matches) {
+                    val eskiAdet = match.groupValues[1].toIntOrNull() ?: continue
+                    val urunAdi = match.groupValues[2].trim()
+                    val eslesenUrun = guncelUrunler.find { it.ad.equals(urunAdi, ignoreCase = true) }
+
+                    if (eslesenUrun != null && eslesenUrun.stok > 0) {
+                        var eklenecekAdet = if (eskiAdet > eslesenUrun.stok) eslesenUrun.stok else eskiAdet
+                        if (eklenecekAdet < eslesenUrun.minAlimMiktari) eklenecekAdet = eslesenUrun.minAlimMiktari
+
+                        if (eklenecekAdet <= eslesenUrun.stok) {
+                            yeniSepet.add(SepetOgesi(eslesenUrun, eklenecekAdet))
+                        } else { bulunamayanUrunler = true }
+                    } else { bulunamayanUrunler = true }
+                }
+
+                if (yeniSepet.isNotEmpty()) {
+                    _sepet.value = yeniSepet
+                    hesaplaToplamTutar()
+                    toptanciKuraliniGetir(toptanciId) // Sepeti doldurunca limiti de çek
+                    if (bulunamayanUrunler) _siparisMesaji.value = "Sipariş sepete kopyalandı ancak bazı ürünler stokta olmadığı için eksik eklendi."
+                    else _siparisMesaji.value = "Sipariş başarıyla sepetinize kopyalandı!"
+                    onSuccess()
                 } else {
-                    50000.0
+                    _siparisMesaji.value = "Bu siparişteki ürünlerin hiçbiri şu an stokta veya satışta değil."
                 }
-
-                if (toplamTutar > mevcutLimit) {
-                    _siparisMesaji.value = "Hata: Cari limitiniz yetersiz! (Kalan Limit: $mevcutLimit ₺)"
-                    return@addOnSuccessListener
-                }
-
-                _siparisMesaji.value = "Siparişiniz işleniyor..."
-                val batch = firestore.batch()
-
-                batch.update(kullaniciRef, "cariLimit", FieldValue.increment(-toplamTutar))
-
-                val musteriSirketUnvani = snapshot.getString("sirketUnvani") ?: "Belirtilmemiş Şirket"
-                val musteriAdresi = snapshot.getString("adres") ?: "Adres Belirtilmemiş"
-                val musteriVergiNo = snapshot.getString("vergiNo") ?: "-"
-                val musteriVergiDairesi = snapshot.getString("vergiDairesi") ?: "-"
-                val musteriYetkili = snapshot.getString("yetkiliKisi") ?: "Belirtilmemiş"
-                val musteriTelefon = snapshot.getString("telefon") ?: "Belirtilmemiş"
-
-                val siparisRef = firestore.collection("siparisler").document()
-                val yeniSiparis = hashMapOf(
-                    "siparisId" to siparisRef.id,
-                    "musteriUid" to aktifKullanici.uid,
-                    "musteriEmail" to (aktifKullanici.email ?: "Bilinmiyor"),
-                    "sirketUnvani" to musteriSirketUnvani,
-                    "teslimatAdresi" to musteriAdresi,
-                    "vergiNo" to musteriVergiNo,
-                    "vergiDairesi" to musteriVergiDairesi,
-                    "yetkiliKisi" to musteriYetkili,
-                    "telefon" to musteriTelefon,
-                    "toptanciId" to toptanciId,
-                    "siparisOzeti" to sepetOzet,
-                    "toplamTutar" to toplamTutar,
-                    "uygulananIskonto" to _iskontoOrani.value, // YENİ: Makbuza not düşüyoruz
-                    "durum" to "Hazırlanıyor",
-                    "tarih" to System.currentTimeMillis()
-                )
-                batch.set(siparisRef, yeniSiparis)
-
-                for (oge in _sepet.value) {
-                    val urunRef = firestore.collection("urunler").document(oge.urun.id)
-                    batch.update(urunRef, "stok", FieldValue.increment(-oge.secilenMiktar.toLong()))
-                }
-
-                batch.commit()
-                    .addOnSuccessListener {
-                        _siparisBasarili.value = true
-                        _siparisMesaji.value = "Siparişiniz Açık Hesabınıza (Cari) işlenerek onaylandı."
-                        _sepet.value = emptyList()
-                        hesaplaToplamTutar()
-                    }
-                    .addOnFailureListener { hata ->
-                        _siparisMesaji.value = "Sipariş tamamlanırken hata oluştu: ${hata.message}"
-                    }
-            }.addOnFailureListener { _siparisMesaji.value = "Kullanıcı bilgileri alınamadı." }
-        }.addOnFailureListener { _siparisMesaji.value = "Toptancı kuralları alınamadı." }
+            }
+            .addOnFailureListener { _siparisMesaji.value = "Katalog kontrol edilirken hata oluştu." }
     }
 
     fun mesajiTemizle() { _siparisMesaji.value = null }
-    fun sepetiTemizle() { _sepet.value = emptyList(); hesaplaToplamTutar() }
-    fun urunuSil(silinecekUrunId: String) { _sepet.value = _sepet.value.filter { it.urun.id != silinecekUrunId }; hesaplaToplamTutar() }
+    fun sepetiTemizle() { _sepet.value = emptyList(); _toptanciMinLimit.value = 0.0; hesaplaToplamTutar() }
+    fun urunuSil(silinecekUrunId: String) {
+        val yeniListe = _sepet.value.filter { it.urun.id != silinecekUrunId }
+        _sepet.value = yeniListe
+        if (yeniListe.isEmpty()) _toptanciMinLimit.value = 0.0
+        hesaplaToplamTutar()
+    }
     fun siparisBasariliDurumunuSifirla() { _siparisBasarili.value = false }
 }

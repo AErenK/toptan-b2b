@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -49,11 +51,9 @@ fun CatalogScreen(
     val aramaMetni by catalogViewModel.aramaMetni.collectAsState()
     val seciliKategori by catalogViewModel.seciliKategori.collectAsState()
     val kategoriler by catalogViewModel.kategoriler.collectAsState()
+    val favoriUrunIds by catalogViewModel.favoriUrunIds.collectAsState() // YENİ
     val siparisMesaji by cartViewModel.siparisMesaji.collectAsState()
-
-    // YENİ: Müşterinin İskonto Oranını Alıyoruz
     val iskontoOrani by cartViewModel.iskontoOrani.collectAsState()
-
     val context = LocalContext.current
 
     LaunchedEffect(toptanciId) {
@@ -67,9 +67,14 @@ fun CatalogScreen(
         }
     }
 
+    // YENİ: "Favorilerim" seçiliyse sadece favori listesindeki ID'lere sahip olanları göster
     val filtrelenmisUrunler = urunler.filter { urun ->
         val aramaUyumu = urun.ad.contains(aramaMetni, ignoreCase = true)
-        val kategoriUyumu = if (seciliKategori == "Tümü") true else urun.kategori == seciliKategori
+        val kategoriUyumu = when (seciliKategori) {
+            "Tümü" -> true
+            "Favorilerim" -> favoriUrunIds.contains(urun.id)
+            else -> urun.kategori == seciliKategori
+        }
         aramaUyumu && kategoriUyumu
     }
 
@@ -86,7 +91,6 @@ fun CatalogScreen(
         containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            // ARAMA ÇUBUĞU
             Box(modifier = Modifier.background(Color.White).padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
                 OutlinedTextField(
                     value = aramaMetni, onValueChange = { catalogViewModel.aramaMetniGuncelle(it) },
@@ -100,7 +104,6 @@ fun CatalogScreen(
                 )
             }
 
-            // DİNAMİK KATEGORİ ÇİPLERİ
             if (kategoriler.size > 1) {
                 LazyRow(
                     modifier = Modifier.fillMaxWidth().background(Color.White).padding(bottom = 12.dp),
@@ -116,7 +119,14 @@ fun CatalogScreen(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = kategori, color = if (isSelected) Color.White else Color(0xFF64748B), fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, fontSize = 13.sp)
+                            // YENİ: "Favorilerim" sekmesine özel kırmızımsı kalp ikonu
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (kategori == "Favorilerim") {
+                                    Icon(Icons.Default.Favorite, contentDescription = null, tint = if (isSelected) Color.White else Color(0xFFEF4444), modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                }
+                                Text(text = kategori, color = if (isSelected) Color.White else Color(0xFF64748B), fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
@@ -124,19 +134,24 @@ fun CatalogScreen(
 
             HorizontalDivider(color = Color(0xFFE2E8F0))
 
-            // ÜRÜN LİSTESİ
             if (yukleniyor) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF2563EB)) }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF2563EB)) }
             } else if (filtrelenmisUrunler.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Aradığınız kriterlere uygun ürün bulunamadı.", color = Color(0xFF64748B)) }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(if (seciliKategori == "Favorilerim") "Henüz favoriye eklediğiniz ürün yok." else "Aradığınız kriterlere uygun ürün bulunamadı.", color = Color(0xFF64748B))
+                }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()
+                    contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     items(filtrelenmisUrunler) { urun ->
+                        val isFavorite = favoriUrunIds.contains(urun.id)
                         MusteriUrunKarti(
                             urun = urun,
-                            iskontoOrani = iskontoOrani, // YENİ: İskonto oranını karta yolluyoruz
+                            iskontoOrani = iskontoOrani,
+                            isFavorite = isFavorite, // YENİ
+                            onFavoriteClick = { catalogViewModel.favoriDurumuDegistir(urun.id) }, // YENİ
                             onClick = { onUrunClick(urun.id) },
                             onSepeteEkle = { cartViewModel.sepeteEkle(urun) }
                         )
@@ -148,10 +163,15 @@ fun CatalogScreen(
 }
 
 @Composable
-fun MusteriUrunKarti(urun: Urun, iskontoOrani: Double, onClick: () -> Unit, onSepeteEkle: () -> Unit) {
+fun MusteriUrunKarti(
+    urun: Urun,
+    iskontoOrani: Double,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    onClick: () -> Unit,
+    onSepeteEkle: () -> Unit
+) {
     val formatter = NumberFormat.getNumberInstance(Locale.forLanguageTag("tr-TR"))
-
-    // YENİ: İndirim Hesaplaması
     val indirimliFiyat = urun.fiyat * (1 - (iskontoOrani / 100.0))
     val normalFiyatStr = formatter.format(urun.fiyat)
     val indirimliFiyatStr = formatter.format(indirimliFiyat)
@@ -164,7 +184,7 @@ fun MusteriUrunKarti(urun: Urun, iskontoOrani: Double, onClick: () -> Unit, onSe
     ) {
         Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF1F5F9)),
+                modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF1F5F9)),
                 contentAlignment = Alignment.Center
             ) {
                 if (urun.gorselUrl.isNotEmpty()) {
@@ -173,11 +193,22 @@ fun MusteriUrunKarti(urun: Urun, iskontoOrani: Double, onClick: () -> Unit, onSe
                     Icon(Icons.Default.Image, contentDescription = "Yok", tint = Color(0xFF94A3B8), modifier = Modifier.size(24.dp))
                 }
 
-                // YENİ: Görsel Üzerine VIP Rozeti
                 if (iskontoOrani > 0) {
-                    Box(
-                        modifier = Modifier.align(Alignment.TopStart).background(Color(0xFFEF4444), RoundedCornerShape(bottomEnd = 8.dp, topStart = 12.dp)).padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) { Text("%${iskontoOrani.toInt()}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    Box(modifier = Modifier.align(Alignment.BottomStart).background(Color(0xFFEF4444), RoundedCornerShape(topEnd = 8.dp, bottomStart = 12.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                        Text("%${iskontoOrani.toInt()}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).background(Color.White.copy(alpha = 0.8f), CircleShape).clickable { onFavoriteClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favori",
+                        tint = if (isFavorite) Color(0xFFEF4444) else Color(0xFF94A3B8),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
@@ -191,15 +222,14 @@ fun MusteriUrunKarti(urun: Urun, iskontoOrani: Double, onClick: () -> Unit, onSe
                 Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 11.sp, color = Color(0xFF64748B))
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // YENİ: İndirimli Fiyat Gösterimi
                 if (iskontoOrani > 0) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(text = "$normalFiyatStr ₺", fontSize = 12.sp, color = Color(0xFF94A3B8), textDecoration = TextDecoration.LineThrough)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "$indirimliFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF16A34A)) // İndirim varsa yeşil göster
+                        Text(text = "$indirimliFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF16A34A))
                     }
                 } else {
-                    Text(text = "$normalFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF2563EB)) // Normalde Mavi
+                    Text(text = "$normalFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF2563EB))
                 }
             }
 

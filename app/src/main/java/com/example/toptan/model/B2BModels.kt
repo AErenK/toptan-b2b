@@ -19,7 +19,7 @@ data class Urun(
     val kategori: String = "",
     val gorselUrl: String = "",
     val eklenmeTarihi: Long = 0L,
-    val aktifMi: Boolean = true // YENİ EKLENEN SATIR
+    val aktifMi: Boolean = true
 )
 
 data class SepetOgesi(
@@ -50,8 +50,8 @@ data class Kullanici(
     val uid: String = "",
     val ad: String = "",
     val eposta: String = "",
-    val rol: String = "", // "Musteri" veya "Toptanci"
-    val fcmToken: String = "" // BİLDİRİMLER İÇİN GEREKLİ ALAN
+    val rol: String = "",
+    val fcmToken: String = ""
 )
 
 data class Musteri(
@@ -64,4 +64,14 @@ data class Musteri(
     val vergiDairesi: String,
     val cariLimit: Double,
     val iskontoOrani: Double = 0.0
+)
+
+data class CariHareket(
+    val islemId: String = "",
+    val musteriUid: String = "",
+    val toptanciId: String = "",
+    val islemTuru: String = "",
+    val tutar: Double = 0.0,
+    val aciklama: String = "",
+    val tarih: Long = 0L
 )

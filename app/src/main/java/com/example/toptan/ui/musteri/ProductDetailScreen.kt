@@ -39,8 +39,15 @@ fun ProductDetailScreen(
     val yukleniyor by detailViewModel.yukleniyor.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val siparisMesaji by cartViewModel.siparisMesaji.collectAsState()
 
-    // Ekran açıldığında ürünü Firebase'den getir
+    LaunchedEffect(siparisMesaji) {
+        siparisMesaji?.let {
+            snackbarHostState.showSnackbar(it)
+            cartViewModel.mesajiTemizle()
+        }
+    }
+
     LaunchedEffect(urunId) {
         if (urunId.isNotEmpty()) {
             detailViewModel.urunuGetir(urunId)
@@ -63,7 +70,7 @@ fun ProductDetailScreen(
         bottomBar = {
             if (urun != null) {
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
                     shadowElevation = 12.dp,
                     color = Color.White,
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
@@ -86,9 +93,6 @@ fun ProductDetailScreen(
                         Button(
                             onClick = {
                                 cartViewModel.sepeteEkle(urun!!)
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Ürün sepete eklendi!")
-                                }
                             },
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),

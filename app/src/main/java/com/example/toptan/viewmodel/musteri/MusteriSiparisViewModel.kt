@@ -23,21 +23,18 @@ class MusteriSiparisViewModel : ViewModel() {
     }
 
     private fun siparisleriGetir() {
-        val aktifMusteriEmail = auth.currentUser?.email ?: return
+        val aktifMusteriUid = auth.currentUser?.uid ?: return
 
-        // Sadece bu müşteriye (email'e) ait siparişleri gerçek zamanlı dinliyoruz
         firestore.collection("siparisler")
-            .whereEqualTo("musteriEmail", aktifMusteriEmail)
+            .whereEqualTo("musteriUid", aktifMusteriUid)
             .addSnapshotListener { snapshot, hata ->
                 if (hata != null || snapshot == null) {
                     _yukleniyor.value = false
                     return@addSnapshotListener
                 }
-
                 val liste = snapshot.documents
                     .mapNotNull { it.toObject(Siparis::class.java) }
-                    .sortedByDescending { it.tarih } // En yeni sipariş en üstte görünsün
-
+                    .sortedByDescending { it.tarih }
                 _siparisler.value = liste
                 _yukleniyor.value = false
             }

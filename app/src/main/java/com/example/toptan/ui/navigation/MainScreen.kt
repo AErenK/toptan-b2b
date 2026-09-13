@@ -20,20 +20,17 @@ import com.example.toptan.ui.auth.*
 import com.example.toptan.ui.toptanci.*
 import com.example.toptan.viewmodel.musteri.CartViewModel
 
-// 1. Rotaları Merkezi Tanımlama (Tip güvenliği ve hata önleme)
 object Routes {
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val REGISTER = "register"
 
-    // Toptancı Rotaları
     const val TOPTANCI_HOME = "toptanci_home"
     const val TOPTANCI_KATALOG = "toptanci_katalog"
     const val TOPTANCI_URUN_EKLE = "toptanci_urun_ekle"
     const val TOPTANCI_SIPARISLER = "toptanci_siparisler"
-    const val TOPTANCI_MUSTERILER = "toptanci_musteriler" // YENİ: Müşteri Yönetim Rotası
+    const val TOPTANCI_MUSTERILER = "toptanci_musteriler"
 
-    // Müşteri Rotaları
     const val HOME = "home"
     const val ORDERS = "orders"
     const val CART = "cart"
@@ -77,7 +74,6 @@ fun MainScreen() {
             startDestination = Routes.SPLASH,
             modifier = Modifier.padding(paddingValues)
         ) {
-            // --- AUTH (KİMLİK DOĞRULAMA) EKRANLARI ---
             composable(Routes.SPLASH) {
                 SplashScreen(
                     onNavigateToLogin = {
@@ -105,13 +101,11 @@ fun MainScreen() {
                     onNavigateToLogin = { navController.popBackStack() },
                     onRegisterSuccess = { rol ->
                         val hedef = if (rol == "toptanci") Routes.TOPTANCI_HOME else Routes.HOME
-                        // Best Practice: Tüm geçmişi güvenle silmek için graph.id kullanımı
                         navController.navigate(hedef) { popUpTo(navController.graph.id) { inclusive = true } }
                     }
                 )
             }
 
-            // --- TOPTANCI YÖNETİM EKRANLARI ---
             composable(Routes.TOPTANCI_HOME) {
                 ToptanciHomeScreen(
                     onLogoutClick = {
@@ -120,7 +114,6 @@ fun MainScreen() {
                     onNavigateToSiparisler = { navController.navigate(Routes.TOPTANCI_SIPARISLER) },
                     onNavigateToUrunEkle = { navController.navigate(Routes.TOPTANCI_URUN_EKLE) },
                     onNavigateToKatalog = { navController.navigate(Routes.TOPTANCI_KATALOG) },
-                    // YENİ: Toptancı ana ekranındaki "Müşterilerim" butonunu buraya bağladık
                     onNavigateToMusteriler = { navController.navigate(Routes.TOPTANCI_MUSTERILER) }
                 )
             }
@@ -129,18 +122,19 @@ fun MainScreen() {
             composable(Routes.TOPTANCI_URUN_EKLE) { ToptanciUrunEkleScreen(onBackClick = { navController.popBackStack() }) }
             composable(Routes.TOPTANCI_SIPARISLER) { ToptanciSiparisScreen(onBackClick = { navController.popBackStack() }) }
 
-            // YENİ: Müşterilerim Ekranı Rotası
             composable(Routes.TOPTANCI_MUSTERILER) {
                 ToptanciMusterilerScreen(onBackClick = { navController.popBackStack() })
             }
 
-            // --- MÜŞTERİ ALIŞVERİŞ EKRANLARI ---
             composable(Routes.HOME) {
-                _root_ide_package_.com.example.toptan.ui.musteri.HomeScreen(onNavigateToCatalog = { toptanciId ->
-                    navController.navigate(
-                        "catalog/$toptanciId"
-                    )
-                })
+                com.example.toptan.ui.musteri.HomeScreen(
+                    onNavigateToCatalog = { toptanciId ->
+                        navController.navigate("catalog/$toptanciId")
+                    },
+                    onNavigateToProduct = { urunId ->
+                        navController.navigate("product_detail/$urunId")
+                    }
+                )
             }
 
             composable(Routes.CATALOG) { backStackEntry ->
@@ -162,7 +156,12 @@ fun MainScreen() {
                 )
             }
 
-            composable(Routes.ORDERS) { _root_ide_package_.com.example.toptan.ui.musteri.OrdersScreen() }
+            composable(Routes.ORDERS) {
+                com.example.toptan.ui.musteri.OrdersScreen(
+                    cartViewModel = sharedCartViewModel,
+                    onNavigateToCart = { navController.navigate(Routes.CART) }
+                )
+            }
 
             composable(Routes.CART) {
                 _root_ide_package_.com.example.toptan.ui.musteri.CartScreen(
@@ -203,7 +202,6 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
             indicatorColor = Color(0xFFDBEAFE)
         )
 
-        // Ortak bir navigasyon fonksiyonu ile tekrar eden kodları azalttık
         val navigateTo = { route: String ->
             navController.navigate(route) {
                 popUpTo(navController.graph.startDestinationId) { saveState = true }
