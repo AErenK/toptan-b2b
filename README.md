@@ -1,3 +1,4 @@
+<img width="1080" height="2400" alt="Screenshot_20260915_173300" src="https://github.com/user-attachments/assets/879b4d82-01c2-4d9b-92b0-b9c35724c96f" />
 # 🚀 Toptan B2B - Premium E-Ticaret ve Sipariş Yönetim Sistemi
 
 Modern, güvenli ve yüksek performanslı bir B2B (İşletmeden İşletmeye) toptan ticaret platformu. Kotlin, Jetpack Compose ve Firebase kullanılarak MVVM mimarisiyle sıfırdan geliştirilmiştir. Toptancılar ve perakendeciler (müşteriler) arasındaki ticaret, stok takibi ve cari hesap yönetimini tamamen dijitalleştirir.
