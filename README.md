@@ -1,4 +1,3 @@
-<img width="1080" height="2400" alt="Screenshot_20260915_173300" src="https://github.com/user-attachments/assets/879b4d82-01c2-4d9b-92b0-b9c35724c96f" />
 # 🚀 Toptan B2B - Premium E-Ticaret ve Sipariş Yönetim Sistemi
 
 Modern, güvenli ve yüksek performanslı bir B2B (İşletmeden İşletmeye) toptan ticaret platformu. Kotlin, Jetpack Compose ve Firebase kullanılarak MVVM mimarisiyle sıfırdan geliştirilmiştir. Toptancılar ve perakendeciler (müşteriler) arasındaki ticaret, stok takibi ve cari hesap yönetimini tamamen dijitalleştirir.
@@ -30,7 +29,7 @@ Sistem, iki farklı kullanıcı yetkisine (Toptancı ve Müşteri) göre tamamen
 
 | Müşteri Ana Ekran | Toptancı Dashboard | Ürün Kataloğu | Sipariş Yönetimi | Müşteri Profili ve Cari |
 | :---: | :---: | :---: | :---: | :---: |
-| <img src="Screenshot_20260915_173300.png" width="200"/> | <img src="Screenshot_20260915_173109.png" width="200"/> | <img src="Screenshot_20260915_173124.png" width="200"/> | <img src="Screenshot_20260915_173136.png" width="200"/> | <img src="Screenshot_20260915_173032.jpg" width="200"/> |
+| <img src="https://github.com/user-attachments/assets/121f7e56-9c8d-4db2-ad9a-79baa608b918" width="200"/> | <img src="https://github.com/user-attachments/assets/4bed1861-f753-4268-885e-d9477a7f8c57" width="200"/> | <img src="https://github.com/user-attachments/assets/8f90f504-8d09-4b40-a4df-c3ece6d45e84" width="200"/> | <img src="https://github.com/user-attachments/assets/e3e8f5e9-c463-4b3e-b281-a769bc28111c" width="200"/> | <img src="https://github.com/user-attachments/assets/b414cbf1-492d-45a8-9ef8-2e35150d3c8c" width="200"/> |
 
 ---
 
