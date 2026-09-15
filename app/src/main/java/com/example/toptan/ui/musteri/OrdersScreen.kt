@@ -54,30 +54,30 @@ fun OrdersScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Fatura & Siparişlerim", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B))
+                        Text("Fatura & Siparişlerim", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground)
                         if (siparisler.isNotEmpty()) {
-                            Text("${siparisler.size} sipariş kaydı bulundu", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+                            Text("${siparisler.size} sipariş kaydı bulundu", fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8FAFC))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(Brush.verticalGradient(colors = listOf(Color(0xFF2563EB).copy(alpha = 0.04f), Color.Transparent))))
+            Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f), Color.Transparent))))
 
             if (yukleniyor) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF2563EB)) }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
             } else if (siparisler.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                        Box(modifier = Modifier.size(90.dp).background(Color(0xFFE2E8F0), shape = CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.ShoppingBag, contentDescription = "Boş", tint = Color(0xFF94A3B8), modifier = Modifier.size(42.dp))
+                        Box(modifier = Modifier.size(90.dp).background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f), shape = CircleShape), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.ShoppingBag, contentDescription = "Boş", tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(42.dp))
                         }
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text("Henüz sipariş vermediniz", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                        Text("Henüz sipariş vermediniz", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             } else {
@@ -109,22 +109,22 @@ fun MusteriSiparisKarti(siparis: Siparis, onTekrarlaClick: () -> Unit) {
     val tarihTemsili = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("tr-TR")).format(Date(siparis.tarih))
     val context = LocalContext.current
 
+    // YENİ: Renkler karanlık mod için alfa (saydamlık) değerleriyle daha dinamik hale getirildi
     val (durumRengi, arkaPlanRenk, durumIkonu) = when (siparis.durum) {
-        "Hazırlanıyor" -> Triple(Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.Schedule)
-        "Yola Çıktı" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), Icons.Default.LocalShipping)
-        "Teslim Edildi" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), Icons.Default.CheckCircle)
-        "İptal Edildi" -> Triple(Color(0xFFEF4444), Color(0xFFFEF2F2), Icons.Default.Cancel)
-        else -> Triple(Color(0xFF64748B), Color(0xFFF1F5F9), Icons.Default.CheckCircle)
+        "Hazırlanıyor" -> Triple(Color(0xFF3B82F6), Color(0xFF3B82F6).copy(alpha = 0.15f), Icons.Default.Schedule)
+        "Yola Çıktı" -> Triple(Color(0xFFF59E0B), Color(0xFFF59E0B).copy(alpha = 0.15f), Icons.Default.LocalShipping)
+        "Teslim Edildi" -> Triple(Color(0xFF10B981), Color(0xFF10B981).copy(alpha = 0.15f), Icons.Default.CheckCircle)
+        "İptal Edildi" -> Triple(Color(0xFFEF4444), Color(0xFFEF4444).copy(alpha = 0.15f), Icons.Default.Cancel)
+        else -> Triple(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Icons.Default.CheckCircle)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // 1. ÜST: Tarih ve Durum
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = tarihTemsili, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                Text(text = tarihTemsili, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 Box(modifier = Modifier.background(arkaPlanRenk, shape = RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(durumIkonu, contentDescription = null, tint = durumRengi, modifier = Modifier.size(14.dp))
@@ -135,36 +135,32 @@ fun MusteriSiparisKarti(siparis: Siparis, onTekrarlaClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. YENİ: Görsel Kargo Takip Çizelgesi
             SiparisDurumCizelgesi(siparis.durum)
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Fatura/Şirket Bilgileri
             if (siparis.sirketUnvani.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Fatura Kesilen: ${siparis.sirketUnvani}", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+                    Text(text = "Fatura Kesilen: ${siparis.sirketUnvani}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 4. Sipariş Özeti
-            Text(text = "Sipariş İçeriği", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+            Text(text = "Sipariş İçeriği", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = siparis.siparisOzeti, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF1E293B))
+            Text(text = siparis.siparisOzeti, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 5. ALT: PDF, Tutar ve Tekrarla Butonu
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(text = "Toplam Tutar", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+                    Text(text = "Toplam Tutar", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
                     Text(
                         text = "$formatliTutar ₺", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp,
-                        color = if (siparis.durum == "İptal Edildi") Color(0xFF94A3B8) else Color(0xFF2563EB),
+                        color = if (siparis.durum == "İptal Edildi") MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary,
                         textDecoration = if (siparis.durum == "İptal Edildi") TextDecoration.LineThrough else null
                     )
                 }
@@ -172,7 +168,7 @@ fun MusteriSiparisKarti(siparis: Siparis, onTekrarlaClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { PdfHelper.siparisPdfOlustur(context, siparis) },
-                        modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
+                        modifier = Modifier.size(36.dp).background(Color(0xFFEF4444).copy(alpha = 0.1f), CircleShape)
                     ) { Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp)) }
 
                     if (siparis.durum != "İptal Edildi") {
@@ -184,9 +180,9 @@ fun MusteriSiparisKarti(siparis: Siparis, onTekrarlaClick: () -> Unit) {
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             modifier = Modifier.height(36.dp)
                         ) {
-                            Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Tekrarla", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Tekrarla", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -206,7 +202,7 @@ fun SiparisDurumCizelgesi(durum: String) {
     }
 
     if (durum == "İptal Edildi") {
-        Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFFEF2F2), RoundedCornerShape(8.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFEF4444).copy(alpha = 0.1f), RoundedCornerShape(8.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Cancel, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Sipariş iptal edildi. Tutar açık hesabınıza iade edilmiştir.", fontSize = 12.sp, color = Color(0xFFEF4444), fontWeight = FontWeight.Medium)
@@ -216,7 +212,7 @@ fun SiparisDurumCizelgesi(durum: String) {
             adimlar.forEachIndexed { index, adim ->
                 val isCompleted = index <= aktifAdim
                 val isCurrent = index == aktifAdim
-                val renk = if (isCompleted) Color(0xFF2563EB) else Color(0xFFE2E8F0)
+                val renk = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                     Box(modifier = Modifier.size(24.dp).background(renk, CircleShape), contentAlignment = Alignment.Center) {
@@ -224,11 +220,17 @@ fun SiparisDurumCizelgesi(durum: String) {
                         else if (isCurrent) Box(modifier = Modifier.size(10.dp).background(Color.White, CircleShape))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(adim, fontSize = 10.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium, color = if (isCompleted) Color(0xFF1E293B) else Color(0xFF94A3B8), textAlign = TextAlign.Center)
+                    Text(
+                        text = adim,
+                        fontSize = 10.sp,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isCompleted) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        textAlign = TextAlign.Center
+                    )
                 }
 
                 if (index < adimlar.size - 1) {
-                    HorizontalDivider(modifier = Modifier.weight(1f).padding(horizontal = 4.dp).offset(y = (-12).dp), color = if (index < aktifAdim) Color(0xFF2563EB) else Color(0xFFE2E8F0), thickness = 2.dp)
+                    HorizontalDivider(modifier = Modifier.weight(1f).padding(horizontal = 4.dp).offset(y = (-12).dp), color = if (index < aktifAdim) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), thickness = 2.dp)
                 }
             }
         }

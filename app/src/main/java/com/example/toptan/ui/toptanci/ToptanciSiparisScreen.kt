@@ -52,11 +52,9 @@ fun ToptanciSiparisScreen(
     val mesaj by viewModel.mesaj.collectAsState()
     val context = LocalContext.current
 
-    val sekmeler = listOf("Hazırlanıyor", "Yola Çıkanlar", "Tamamlandı / İptal")
+    val sekmeler = listOf("Hazırlanıyor", "Yola Çıkanlar", "Tamamlanan/İptal")
     val pagerState = rememberPagerState(pageCount = { sekmeler.size })
     val coroutineScope = rememberCoroutineScope()
-
-    // İptal Onay Penceresi için State
     var iptalEdilecekSiparis by remember { mutableStateOf<Siparis?>(null) }
 
     LaunchedEffect(mesaj) {
@@ -69,33 +67,31 @@ fun ToptanciSiparisScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sipariş Yönetimi", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+                title = { Text("Sipariş Yönetimi", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B)) }
+                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = MaterialTheme.colorScheme.onBackground) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-
             TabRow(
                 selectedTabIndex = pagerState.currentPage,
-                containerColor = Color.White,
-                contentColor = Color(0xFF2563EB),
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]).clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
-                        color = Color(0xFF2563EB),
+                        color = MaterialTheme.colorScheme.primary,
                         height = 4.dp
                     )
                 }
             ) {
                 sekmeler.forEachIndexed { index, baslik ->
                     val isSelected = pagerState.currentPage == index
-                    val textColor by animateColorAsState(if (isSelected) Color(0xFF2563EB) else Color(0xFF64748B), label = "tabColor")
-
+                    val textColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), label = "tabColor")
                     Tab(
                         selected = isSelected,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
@@ -113,14 +109,14 @@ fun ToptanciSiparisScreen(
 
                 if (yukleniyor) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF2563EB))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (filtrelenmisSiparisler.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(64.dp))
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f), modifier = Modifier.size(64.dp))
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Bu aşamada sipariş bulunmuyor.", color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+                            Text("Bu aşamada sipariş bulunmuyor.", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
                         }
                     }
                 } else {
@@ -142,7 +138,6 @@ fun ToptanciSiparisScreen(
         }
     }
 
-    // YENİ: SİPARİŞ İPTAL ONAY DİALOGU
     if (iptalEdilecekSiparis != null) {
         val formatliTutar = NumberFormat.getNumberInstance(Locale("tr", "TR")).format(iptalEdilecekSiparis!!.toplamTutar)
         AlertDialog(
@@ -150,13 +145,12 @@ fun ToptanciSiparisScreen(
             title = { Text("Siparişi İptal Et", fontWeight = FontWeight.Bold, color = Color(0xFFEF4444), fontSize = 18.sp) },
             text = {
                 Text(
-                    "Bu siparişi iptal etmek istediğinize emin misiniz?\n\n" +
-                            "İptal ederseniz sipariş tutarı olan $formatliTutar ₺, müşterinin Cari Limitine anında geri yüklenecektir.",
-                    fontSize = 14.sp, color = Color(0xFF64748B)
+                    "Bu siparişi iptal etmek istediğinize emin misiniz?\n\nİptal ederseniz sipariş tutarı olan $formatliTutar ₺ müşterinin Cari Limitine anında geri yüklenecektir.",
+                    fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {
                 Button(
                     onClick = {
@@ -165,10 +159,10 @@ fun ToptanciSiparisScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                     shape = RoundedCornerShape(10.dp)
-                ) { Text("Evet, İptal ve İade Et", fontWeight = FontWeight.Bold) }
+                ) { Text("Evet, İptal ve İade Et", fontWeight = FontWeight.Bold, color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { iptalEdilecekSiparis = null }) { Text("Vazgeç", color = Color(0xFF64748B), fontWeight = FontWeight.Bold) }
+                TextButton(onClick = { iptalEdilecekSiparis = null }) { Text("Vazgeç", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.Bold) }
             }
         )
     }
@@ -182,23 +176,22 @@ fun ToptanciSiparisKarti(siparis: Siparis, onDurumDegistir: (String) -> Unit, on
     val context = LocalContext.current
 
     val (durumRengi, arkaPlanRenk, durumIkonu) = when (siparis.durum) {
-        "Hazırlanıyor", "Yeni" -> Triple(Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.Schedule)
-        "Yola Çıktı" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), Icons.Default.LocalShipping)
-        "Teslim Edildi" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), Icons.Default.CheckCircle)
-        "İptal Edildi" -> Triple(Color(0xFFEF4444), Color(0xFFFEF2F2), Icons.Default.Cancel)
-        else -> Triple(Color(0xFF64748B), Color(0xFFF1F5F9), Icons.Default.CheckCircle)
+        "Hazırlanıyor", "Yeni" -> Triple(Color(0xFF3B82F6), Color(0xFF3B82F6).copy(alpha = 0.15f), Icons.Default.Schedule)
+        "Yola Çıktı" -> Triple(Color(0xFFF59E0B), Color(0xFFF59E0B).copy(alpha = 0.15f), Icons.Default.LocalShipping)
+        "Teslim Edildi" -> Triple(Color(0xFF10B981), Color(0xFF10B981).copy(alpha = 0.15f), Icons.Default.CheckCircle)
+        "İptal Edildi" -> Triple(Color(0xFFEF4444), Color(0xFFEF4444).copy(alpha = 0.15f), Icons.Default.Cancel)
+        else -> Triple(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Icons.Default.CheckCircle)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // 1. ÜST: Tarih ve Durum Rozeti
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = tarihTemsili, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                Text(text = tarihTemsili, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 Box(modifier = Modifier.background(arkaPlanRenk, shape = RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(durumIkonu, contentDescription = "Durum", tint = durumRengi, modifier = Modifier.size(14.dp))
@@ -207,90 +200,77 @@ fun ToptanciSiparisKarti(siparis: Siparis, onDurumDegistir: (String) -> Unit, on
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. ORTA: Müşteri ve Sipariş Detayları
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(40.dp).background(Color(0xFFF8FAFC), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
+                Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = siparis.sirketUnvani, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Color(0xFF1E293B))
+                    Text(text = siparis.sirketUnvani, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(12.dp))
+                        Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "${siparis.yetkiliKisi} - ${siparis.telefon}", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text(text = "${siparis.yetkiliKisi} - ${siparis.telefon}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
 
-            Surface(color = Color(0xFFF8FAFC), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Text(text = siparis.siparisOzeti, fontSize = 13.sp, color = Color(0xFF475569), lineHeight = 18.sp, modifier = Modifier.padding(12.dp))
+            Surface(color = MaterialTheme.colorScheme.background, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(text = siparis.siparisOzeti, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), lineHeight = 18.sp, modifier = Modifier.padding(12.dp))
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. ALT: Tutar ve Aksiyon Butonları
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Sipariş Tutarı", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("Sipariş Tutarı", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text(
-                        text = "$formatliTutar ₺",
-                        fontWeight = FontWeight.ExtraBold, fontSize = 18.sp,
-                        // İptal edildiyse üstünü çiz
+                        text = "$formatliTutar ₺", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp,
                         textDecoration = if (siparis.durum == "İptal Edildi") androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                        color = if (siparis.durum == "İptal Edildi") Color(0xFF94A3B8) else Color(0xFF2563EB)
+                        color = if (siparis.durum == "İptal Edildi") MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary
                     )
                 }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-
-                    // Sadece iptal edilmemiş siparişler için PDF İndirme ve Diğer Aksiyonlar
                     if (siparis.durum != "İptal Edildi") {
                         IconButton(
                             onClick = { PdfHelper.siparisPdfOlustur(context, siparis) },
-                            modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
+                            modifier = Modifier.size(36.dp).background(Color(0xFFEF4444).copy(alpha = 0.1f), CircleShape)
                         ) {
                             Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
                         }
-
                         when (siparis.durum) {
                             "Hazırlanıyor", "Yeni" -> {
-                                // YENİ: İPTAL BUTONU
                                 IconButton(
                                     onClick = onIptalEt,
-                                    modifier = Modifier.size(36.dp).background(Color(0xFFFEF2F2), CircleShape)
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFEF4444).copy(alpha = 0.1f), CircleShape)
                                 ) {
                                     Icon(Icons.Default.Cancel, contentDescription = "İptal Et", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
                                 }
-
                                 Button(
                                     onClick = { onDurumDegistir("Yola Çıktı") },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Kargoya Ver", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Kargoya Ver", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                             "Yola Çıktı" -> {
                                 Button(
                                     onClick = { onDurumDegistir("Teslim Edildi") },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Teslim Edildi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Teslim Edildi", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         }

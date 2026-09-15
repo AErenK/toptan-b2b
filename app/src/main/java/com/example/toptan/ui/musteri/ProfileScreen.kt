@@ -46,8 +46,6 @@ fun ProfileScreen(
     var showSupportDialog by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
     var isCompanyInfoExpanded by remember { mutableStateOf(false) }
-
-    // YENİ: Profil Düzenleme Dialog State'i
     var showEditProfileDialog by remember { mutableStateOf(false) }
 
     val maxLimit = 50000.0
@@ -59,7 +57,6 @@ fun ProfileScreen(
     var yetkiliKisi by remember { mutableStateOf("-") }
     var telefon by remember { mutableStateOf("-") }
 
-    // YENİ: Düzenleme Formu İçin Geçici State'ler
     var editSirketUnvani by remember { mutableStateOf("") }
     var editVergiDairesi by remember { mutableStateOf("") }
     var editVergiNo by remember { mutableStateOf("") }
@@ -96,7 +93,7 @@ fun ProfileScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Box(
             modifier = Modifier.fillMaxWidth().height(260.dp)
                 .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)).background(Color(0xFF0F172A))
@@ -111,7 +108,7 @@ fun ProfileScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Müşteri Hesabı", color = Color(0xFF94A3B8), fontSize = 13.sp)
+                        Text("Müşteri Hesabı", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(text = userEmail.substringBefore("@"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                     }
@@ -126,7 +123,7 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxSize().padding(top = 130.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // CARİ KART
+            // CARİ KART (VIP Siyah Görünümü her temada korunur)
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(200.dp),
                 shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -148,8 +145,8 @@ fun ProfileScreen(
                         }
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Kullanım: $formatliKullanilan ₺", color = Color(0xFF94A3B8), fontSize = 11.sp)
-                                Text("%${(kullanimOrani * 100).toInt()}", color = Color(0xFF94A3B8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Kullanım: $formatliKullanilan ₺", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                                Text("%${(kullanimOrani * 100).toInt()}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             LinearProgressIndicator(progress = { kullanimOrani }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(10.dp)), color = vipRenk, trackColor = Color.White.copy(alpha = 0.1f))
@@ -159,25 +156,24 @@ fun ProfileScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ŞİRKET BİLGİLERİ KARTI
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).clickable { isCompanyInfoExpanded = !isCompanyInfoExpanded },
-                shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(40.dp).background(Color(0xFFF3E8FF), CircleShape), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(40.dp).background(Color(0xFF9333EA).copy(alpha = 0.1f), CircleShape), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF9333EA), modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(14.dp))
-                            Text("Fatura ve Şirket Bilgileri", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E293B))
+                            Text("Fatura ve Şirket Bilgileri", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
-                        Icon(imageVector = if (isCompanyInfoExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color(0xFF94A3B8))
+                        Icon(imageVector = if (isCompanyInfoExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                     }
                     AnimatedVisibility(visible = isCompanyInfoExpanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                         Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                            HorizontalDivider(color = Color(0xFFF1F5F9))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                             Spacer(modifier = Modifier.height(16.dp))
                             CompanyInfoRow("Şirket Ünvanı:", sirketUnvani)
                             CompanyInfoRow("Yetkili:", yetkiliKisi)
@@ -191,16 +187,13 @@ fun ProfileScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // MENÜLER
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-
                 ActionMenuCard(
                     icon = Icons.Default.Edit,
                     title = "Profil ve Adresi Düzenle",
                     subtitle = "Teslimat ve fatura bilgilerinizi güncelleyin",
                     iconColor = Color(0xFF8B5CF6),
                     onClick = {
-                        // Dialog açılmadan önce mevcut verileri form alanlarına dolduruyoruz
                         editSirketUnvani = sirketUnvani
                         editYetkiliKisi = yetkiliKisi
                         editTelefon = telefon
@@ -211,8 +204,7 @@ fun ProfileScreen(
                     }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-
-                ActionMenuCard(icon = Icons.Default.ShoppingBag, title = "Geçmiş Siparişlerim", subtitle = "Tüm alımları ve faturaları gör", iconColor = Color(0xFF2563EB), onClick = onNavigateToSiparislerim)
+                ActionMenuCard(icon = Icons.Default.ShoppingBag, title = "Geçmiş Siparişlerim", subtitle = "Tüm alımları ve faturaları gör", iconColor = MaterialTheme.colorScheme.primary, onClick = onNavigateToSiparislerim)
                 Spacer(modifier = Modifier.height(12.dp))
                 ActionMenuCard(icon = Icons.Default.HeadsetMic, title = "Müşteri Hizmetleri", subtitle = "Toptancınızla iletişime geçin", iconColor = Color(0xFFD97706), onClick = { showSupportDialog = true })
                 Spacer(modifier = Modifier.height(12.dp))
@@ -222,16 +214,14 @@ fun ProfileScreen(
         }
     }
 
-    // YENİ: PROFİL DÜZENLEME DİALOGU
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Profili Düzenle", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+            title = { Text("Profili Düzenle", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
-                    Text("Değişiklikler bir sonraki siparişinizden itibaren faturanıza yansıyacaktır.", fontSize = 12.sp, color = Color.Gray)
+                    Text("Değişiklikler bir sonraki siparişinizden itibaren faturanıza yansıyacaktır.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.height(16.dp))
-
                     OutlinedTextField(value = editSirketUnvani, onValueChange = { editSirketUnvani = it }, label = { Text("Şirket / Dükkan Adı") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(value = editYetkiliKisi, onValueChange = { editYetkiliKisi = it }, label = { Text("Yetkili Ad Soyad") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
@@ -247,7 +237,7 @@ fun ProfileScreen(
                 }
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {
                 Button(
                     onClick = {
@@ -274,36 +264,38 @@ fun ProfileScreen(
                                 }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled = !isUpdating
-                ) { Text(if (isUpdating) "Kaydediliyor..." else "Kaydet", fontWeight = FontWeight.Bold) }
+                ) { Text(if (isUpdating) "Kaydediliyor..." else "Kaydet", fontWeight = FontWeight.Bold, color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }, enabled = !isUpdating) { Text("İptal", color = Color.Gray) }
+                TextButton(onClick = { showEditProfileDialog = false }, enabled = !isUpdating) { Text("İptal", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
             }
         )
     }
 
-    // DİĞER DİALOGLAR
     if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showLogoutDialog = false }, title = { Text("Çıkış Yap", fontWeight = FontWeight.Bold) },
-            text = { Text("Hesabınızdan çıkış yapmak istediğinize emin misiniz?", color = Color(0xFF64748B)) },
+            onDismissRequest = { showLogoutDialog = false }, title = { Text("Çıkış Yap", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text("Hesabınızdan çıkış yapmak istediğinize emin misiniz?", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = { Button(onClick = { showLogoutDialog = false; FirebaseAuth.getInstance().signOut(); onLogoutClick() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))) { Text("Evet, Çıkış Yap", color = Color.White) } },
-            dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("İptal", color = Color(0xFF64748B)) } }
+            dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("İptal", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) } }
         )
     }
     if (showSupportDialog) {
         AlertDialog(
-            onDismissRequest = { showSupportDialog = false }, title = { Text("Müşteri Hizmetleri", fontWeight = FontWeight.Bold) },
-            text = { Column { Text("Destek ekibimize çalışma saatleri içinde ulaşabilirsiniz.", color = Color.Gray); Spacer(modifier = Modifier.height(16.dp)); Text("📞 Telefon: 0850 123 45 67", fontWeight = FontWeight.SemiBold); Spacer(modifier = Modifier.height(8.dp)); Text("✉️ E-Posta: destek@toptanb2b.com", fontWeight = FontWeight.SemiBold) } },
+            onDismissRequest = { showSupportDialog = false }, title = { Text("Müşteri Hizmetleri", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = { Column { Text("Destek ekibimize çalışma saatleri içinde ulaşabilirsiniz.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)); Spacer(modifier = Modifier.height(16.dp)); Text("📞 Telefon: 0850 123 45 67", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface); Spacer(modifier = Modifier.height(8.dp)); Text("✉️ E-Posta: destek@toptanb2b.com", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface) } },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = { Button(onClick = { showSupportDialog = false }) { Text("Tamam") } }
         )
     }
     if (showInfoDialog) {
         AlertDialog(
-            onDismissRequest = { showInfoDialog = false }, title = { Text("Uygulama Hakkında", fontWeight = FontWeight.Bold) },
-            text = { Column { Text("Toptan B2B Sipariş Sistemi", fontWeight = FontWeight.Bold); Spacer(modifier = Modifier.height(8.dp)); Text("Sürüm: 1.0.0 (Premium)", color = Color.Gray); Spacer(modifier = Modifier.height(8.dp)); Text("Tüm hakları saklıdır © 2026", fontSize = 12.sp, color = Color.Gray) } },
+            onDismissRequest = { showInfoDialog = false }, title = { Text("Uygulama Hakkında", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = { Column { Text("Toptan B2B Sipariş Sistemi", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface); Spacer(modifier = Modifier.height(8.dp)); Text("Sürüm: 1.0.0 (Premium)", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)); Spacer(modifier = Modifier.height(8.dp)); Text("Tüm hakları saklıdır © 2026", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) } },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = { Button(onClick = { showInfoDialog = false }) { Text("Kapat") } }
         )
     }
@@ -312,14 +304,14 @@ fun ProfileScreen(
 @Composable
 fun CompanyInfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, color = Color(0xFF64748B), fontSize = 13.sp)
-        Text(text = value, color = Color(0xFF1E293B), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 13.sp)
+        Text(text = value, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 fun ActionMenuCard(icon: ImageVector, title: String, subtitle: String, iconColor: Color, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Box(modifier = Modifier.size(46.dp).background(iconColor.copy(alpha = 0.1f), shape = CircleShape), contentAlignment = Alignment.Center) {
@@ -327,12 +319,12 @@ fun ActionMenuCard(icon: ImageVector, title: String, subtitle: String, iconColor
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E293B))
+                    Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(subtitle, fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+                    Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
                 }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = "Git", tint = Color(0xFFCBD5E1), modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.ChevronRight, contentDescription = "Git", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), modifier = Modifier.size(22.dp))
         }
     }
 }

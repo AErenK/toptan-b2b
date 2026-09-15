@@ -24,13 +24,11 @@ object Routes {
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val REGISTER = "register"
-
     const val TOPTANCI_HOME = "toptanci_home"
     const val TOPTANCI_KATALOG = "toptanci_katalog"
     const val TOPTANCI_URUN_EKLE = "toptanci_urun_ekle"
     const val TOPTANCI_SIPARISLER = "toptanci_siparisler"
     const val TOPTANCI_MUSTERILER = "toptanci_musteriler"
-
     const val HOME = "home"
     const val ORDERS = "orders"
     const val CART = "cart"
@@ -44,12 +42,10 @@ fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     val sharedCartViewModel: CartViewModel = viewModel()
     val sepetListesi by sharedCartViewModel.sepet.collectAsState()
     val sepetUrunSayisi = sepetListesi.size
 
-    // Sadece alt menünün (BottomBar) görüneceği MÜŞTERİ ana ekranları
     val bottomBarDestinations = listOf(
         Routes.HOME,
         Routes.ORDERS,
@@ -57,7 +53,6 @@ fun MainScreen() {
         Routes.PROFILE
     )
 
-    // Daha güvenli alt menü görünürlük kontrolü
     val showBottomBar = bottomBarDestinations.contains(currentRoute) ||
             currentRoute?.startsWith("catalog/") == true
 
@@ -67,7 +62,7 @@ fun MainScreen() {
                 BottomNavigationBar(navController = navController, sepetUrunSayisi = sepetUrunSayisi)
             }
         },
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         NavHost(
             navController = navController,
@@ -85,7 +80,6 @@ fun MainScreen() {
                     }
                 )
             }
-
             composable(Routes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { rol ->
@@ -95,7 +89,6 @@ fun MainScreen() {
                     onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
                 )
             }
-
             composable(Routes.REGISTER) {
                 RegisterScreen(
                     onNavigateToLogin = { navController.popBackStack() },
@@ -105,10 +98,10 @@ fun MainScreen() {
                     }
                 )
             }
-
             composable(Routes.TOPTANCI_HOME) {
                 ToptanciHomeScreen(
                     onLogoutClick = {
+                        sharedCartViewModel.sepetiTemizle() // YENİ: Çıkış yaparken sepeti anında yok eder!
                         navController.navigate(Routes.LOGIN) { popUpTo(navController.graph.id) { inclusive = true } }
                     },
                     onNavigateToSiparisler = { navController.navigate(Routes.TOPTANCI_SIPARISLER) },
@@ -117,15 +110,12 @@ fun MainScreen() {
                     onNavigateToMusteriler = { navController.navigate(Routes.TOPTANCI_MUSTERILER) }
                 )
             }
-
             composable(Routes.TOPTANCI_KATALOG) { ToptanciKatalogScreen(onBackClick = { navController.popBackStack() }) }
             composable(Routes.TOPTANCI_URUN_EKLE) { ToptanciUrunEkleScreen(onBackClick = { navController.popBackStack() }) }
             composable(Routes.TOPTANCI_SIPARISLER) { ToptanciSiparisScreen(onBackClick = { navController.popBackStack() }) }
-
             composable(Routes.TOPTANCI_MUSTERILER) {
                 ToptanciMusterilerScreen(onBackClick = { navController.popBackStack() })
             }
-
             composable(Routes.HOME) {
                 com.example.toptan.ui.musteri.HomeScreen(
                     onNavigateToCatalog = { toptanciId ->
@@ -136,7 +126,6 @@ fun MainScreen() {
                     }
                 )
             }
-
             composable(Routes.CATALOG) { backStackEntry ->
                 val toptanciId = backStackEntry.arguments?.getString("toptanciId") ?: ""
                 _root_ide_package_.com.example.toptan.ui.musteri.CatalogScreen(
@@ -146,7 +135,6 @@ fun MainScreen() {
                     onUrunClick = { urunId -> navController.navigate("product_detail/$urunId") }
                 )
             }
-
             composable(Routes.PRODUCT_DETAIL) { backStackEntry ->
                 val urunId = backStackEntry.arguments?.getString("urunId") ?: ""
                 _root_ide_package_.com.example.toptan.ui.musteri.ProductDetailScreen(
@@ -155,28 +143,22 @@ fun MainScreen() {
                     onBackClick = { navController.popBackStack() }
                 )
             }
-
             composable(Routes.ORDERS) {
                 com.example.toptan.ui.musteri.OrdersScreen(
                     cartViewModel = sharedCartViewModel,
                     onNavigateToCart = { navController.navigate(Routes.CART) }
                 )
             }
-
             composable(Routes.CART) {
                 _root_ide_package_.com.example.toptan.ui.musteri.CartScreen(
                     viewModel = sharedCartViewModel
                 )
             }
-
             composable(Routes.PROFILE) {
                 _root_ide_package_.com.example.toptan.ui.musteri.ProfileScreen(
                     onLogoutClick = {
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(navController.graph.id) {
-                                inclusive = true
-                            }
-                        }
+                        sharedCartViewModel.sepetiTemizle()
+                        navController.navigate(Routes.LOGIN) { popUpTo(navController.graph.id) { inclusive = true } }
                     },
                     onNavigateToSiparislerim = { navController.navigate(Routes.ORDERS) }
                 )
@@ -191,15 +173,15 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface, // YENİ: Alt bar dinamik oldu
         tonalElevation = 6.dp
     ) {
         val itemColors = NavigationBarItemDefaults.colors(
-            selectedIconColor = Color(0xFF2563EB),
-            selectedTextColor = Color(0xFF2563EB),
-            unselectedIconColor = Color(0xFF64748B),
-            unselectedTextColor = Color(0xFF64748B),
-            indicatorColor = Color(0xFFDBEAFE)
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
         )
 
         val navigateTo = { route: String ->
@@ -217,7 +199,6 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
             onClick = { navigateTo(Routes.HOME) },
             colors = itemColors
         )
-
         NavigationBarItem(
             icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Siparişler") },
             label = { Text("Siparişler", fontSize = 11.sp) },
@@ -225,7 +206,6 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
             onClick = { navigateTo(Routes.ORDERS) },
             colors = itemColors
         )
-
         NavigationBarItem(
             icon = {
                 BadgedBox(
@@ -245,7 +225,6 @@ fun BottomNavigationBar(navController: NavController, sepetUrunSayisi: Int) {
             onClick = { navigateTo(Routes.CART) },
             colors = itemColors
         )
-
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, contentDescription = "Profil") },
             label = { Text("Profil", fontSize = 11.sp) },

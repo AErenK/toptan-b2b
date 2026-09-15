@@ -51,7 +51,7 @@ fun CatalogScreen(
     val aramaMetni by catalogViewModel.aramaMetni.collectAsState()
     val seciliKategori by catalogViewModel.seciliKategori.collectAsState()
     val kategoriler by catalogViewModel.kategoriler.collectAsState()
-    val favoriUrunIds by catalogViewModel.favoriUrunIds.collectAsState() // YENİ
+    val favoriUrunIds by catalogViewModel.favoriUrunIds.collectAsState()
     val siparisMesaji by cartViewModel.siparisMesaji.collectAsState()
     val iskontoOrani by cartViewModel.iskontoOrani.collectAsState()
     val context = LocalContext.current
@@ -67,7 +67,6 @@ fun CatalogScreen(
         }
     }
 
-    // YENİ: "Favorilerim" seçiliyse sadece favori listesindeki ID'lere sahip olanları göster
     val filtrelenmisUrunler = urunler.filter { urun ->
         val aramaUyumu = urun.ad.contains(aramaMetni, ignoreCase = true)
         val kategoriUyumu = when (seciliKategori) {
@@ -81,32 +80,36 @@ fun CatalogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ürün Kataloğu", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+                title = { Text("Ürün Kataloğu", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = Color(0xFF1E293B)) }
+                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = MaterialTheme.colorScheme.onSurface) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        containerColor = Color(0xFFF8FAFC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            Box(modifier = Modifier.background(Color.White).padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
+            Box(modifier = Modifier.background(MaterialTheme.colorScheme.surface).padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
                 OutlinedTextField(
                     value = aramaMetni, onValueChange = { catalogViewModel.aramaMetniGuncelle(it) },
-                    placeholder = { Text("Katalogda Ürün Ara...", color = Color(0xFF94A3B8), fontSize = 14.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF64748B)) },
+                    placeholder = { Text("Katalogda Ürün Ara...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 14.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp), singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2563EB), unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedContainerColor = Color(0xFFF1F5F9), unfocusedContainerColor = Color(0xFFF1F5F9)
+                        focusedContainerColor = MaterialTheme.colorScheme.background,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
 
             if (kategoriler.size > 1) {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth().background(Color.White).padding(bottom = 12.dp),
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(bottom = 12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(kategoriler) { kategori ->
@@ -114,44 +117,47 @@ fun CatalogScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) Color(0xFF2563EB) else Color(0xFFF1F5F9))
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background)
                                 .clickable { catalogViewModel.kategoriSec(kategori) }
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // YENİ: "Favorilerim" sekmesine özel kırmızımsı kalp ikonu
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (kategori == "Favorilerim") {
-                                    Icon(Icons.Default.Favorite, contentDescription = null, tint = if (isSelected) Color.White else Color(0xFFEF4444), modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Favorite, contentDescription = null, tint = if (isSelected) MaterialTheme.colorScheme.background else Color(0xFFEF4444), modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
-                                Text(text = kategori, color = if (isSelected) Color.White else Color(0xFF64748B), fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, fontSize = 13.sp)
+                                Text(
+                                    text = kategori,
+                                    color = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
                     }
                 }
             }
 
-            HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
 
             if (yukleniyor) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF2563EB)) }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
             } else if (filtrelenmisUrunler.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(if (seciliKategori == "Favorilerim") "Henüz favoriye eklediğiniz ürün yok." else "Aradığınız kriterlere uygun ürün bulunamadı.", color = Color(0xFF64748B))
+                    Text(if (seciliKategori == "Favorilerim") "Henüz favoriye eklediğiniz ürün yok." else "Aradığınız kriterlere uygun ürün bulunamadı.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     items(filtrelenmisUrunler) { urun ->
                         val isFavorite = favoriUrunIds.contains(urun.id)
                         MusteriUrunKarti(
                             urun = urun,
                             iskontoOrani = iskontoOrani,
-                            isFavorite = isFavorite, // YENİ
-                            onFavoriteClick = { catalogViewModel.favoriDurumuDegistir(urun.id) }, // YENİ
+                            isFavorite = isFavorite,
+                            onFavoriteClick = { catalogViewModel.favoriDurumuDegistir(urun.id) },
                             onClick = { onUrunClick(urun.id) },
                             onSepeteEkle = { cartViewModel.sepeteEkle(urun) }
                         )
@@ -179,18 +185,18 @@ fun MusteriUrunKarti(
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF1F5F9)),
+                modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 if (urun.gorselUrl.isNotEmpty()) {
                     AsyncImage(model = urun.gorselUrl, contentDescription = urun.ad, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
-                    Icon(Icons.Default.Image, contentDescription = "Yok", tint = Color(0xFF94A3B8), modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Image, contentDescription = "Yok", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
                 }
 
                 if (iskontoOrani > 0) {
@@ -200,13 +206,13 @@ fun MusteriUrunKarti(
                 }
 
                 Box(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).background(Color.White.copy(alpha = 0.8f), CircleShape).clickable { onFavoriteClick() },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), CircleShape).clickable { onFavoriteClick() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Favori",
-                        tint = if (isFavorite) Color(0xFFEF4444) else Color(0xFF94A3B8),
+                        tint = if (isFavorite) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -215,21 +221,21 @@ fun MusteriUrunKarti(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text = urun.ad, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Kategori: ${urun.kategori.ifEmpty { "Belirtilmemiş" }}", fontSize = 11.sp, color = Color(0xFF64748B))
+                Text(text = "Kategori: ${urun.kategori.ifEmpty { "Belirtilmemiş" }}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 11.sp, color = Color(0xFF64748B))
+                Text(text = "Min. Alım: ${urun.minAlimMiktari} Adet", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 Spacer(modifier = Modifier.height(6.dp))
 
                 if (iskontoOrani > 0) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(text = "$normalFiyatStr ₺", fontSize = 12.sp, color = Color(0xFF94A3B8), textDecoration = TextDecoration.LineThrough)
+                        Text(text = "$normalFiyatStr ₺", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), textDecoration = TextDecoration.LineThrough)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "$indirimliFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF16A34A))
+                        Text(text = "$indirimliFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF10B981))
                     }
                 } else {
-                    Text(text = "$normalFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color(0xFF2563EB))
+                    Text(text = "$normalFiyatStr ₺", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -237,8 +243,8 @@ fun MusteriUrunKarti(
 
             IconButton(
                 onClick = onSepeteEkle,
-                modifier = Modifier.size(42.dp).background(Color(0xFF2563EB), RoundedCornerShape(10.dp))
-            ) { Icon(Icons.Default.AddShoppingCart, contentDescription = "Sepete Ekle", tint = Color.White, modifier = Modifier.size(20.dp)) }
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+            ) { Icon(Icons.Default.AddShoppingCart, contentDescription = "Sepete Ekle", tint = MaterialTheme.colorScheme.background, modifier = Modifier.size(20.dp)) }
         }
     }
 }

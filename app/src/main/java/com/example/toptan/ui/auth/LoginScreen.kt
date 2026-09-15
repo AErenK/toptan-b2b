@@ -42,17 +42,13 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var sifre by remember { mutableStateOf("") }
-
-    // Şifremi Unuttum Penceresi Kontrolü
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var resetEmail by remember { mutableStateOf("") }
 
     val mesaj by viewModel.mesaj.collectAsState()
     val kullaniciRolu by viewModel.kullaniciRolu.collectAsState()
-
     val focusManager = LocalFocusManager.current
 
-    // Anlık (Real-time) Doğrulama Kontrolleri
     val isEmailValid = email.isEmpty() || Patterns.EMAIL_ADDRESS.matcher(email).matches()
     val isFormValid = email.isNotEmpty() && sifre.isNotEmpty() && isEmailValid
 
@@ -65,77 +61,73 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8FAFC))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Üst Arka Plan Gradyanı
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp)
-                .background(Brush.verticalGradient(colors = listOf(Color(0xFF2563EB).copy(alpha = 0.08f), Color.Transparent)))
+                .background(Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), Color.Transparent)))
         )
 
-        // İçerik (Klavye açıldığında kaydırılabilir yapı - Ergonomi)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()), // Klavye dostu
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Spacer(modifier = Modifier.height(80.dp))
-
             Text(
                 text = "Tekrar Hoş Geldiniz",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1E293B)
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Toptan B2B ağınıza giriş yaparak ticarete devam edin",
-                color = Color(0xFF64748B),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // E-posta Alanı (Akıllı Doğrulamalı)
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("E-posta Adresi", color = Color(0xFF64748B)) },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color(0xFF64748B)) },
-                isError = !isEmailValid, // Hata durumu
+                label = { Text("E-posta Adresi", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
+                isError = !isEmailValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth().height(58.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF2563EB),
-                    unfocusedBorderColor = Color(0xFFE2E8F0),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    errorBorderColor = Color(0xFFEF4444)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    errorBorderColor = Color(0xFFEF4444),
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 singleLine = true
             )
 
-            // Canlı Hata Mesajı
             AnimatedVisibility(visible = !isEmailValid) {
                 Text("Lütfen geçerli bir e-posta adresi girin", color = Color(0xFFEF4444), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp).fillMaxWidth(), textAlign = TextAlign.Start)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Şifre Alanı
             OutlinedTextField(
                 value = sifre,
                 onValueChange = { sifre = it },
-                label = { Text("Şifre", color = Color(0xFF64748B)) },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
+                label = { Text("Şifre", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
@@ -145,29 +137,29 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth().height(58.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF2563EB),
-                    unfocusedBorderColor = Color(0xFFE2E8F0),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 singleLine = true
             )
 
-            // Şifremi Unuttum Butonu
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 TextButton(onClick = { showForgotPasswordDialog = true }) {
-                    Text("Şifremi Unuttum", color = Color(0xFF2563EB), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Şifremi Unuttum", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Firebase'den gelen Mesaj (Başarı veya Hata)
             AnimatedVisibility(visible = !mesaj.isNullOrEmpty(), enter = fadeIn(), exit = fadeOut()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFFDCFCE7) else Color(0xFFFEF2F2)
+                    color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f)
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         if (!mesaj.orEmpty().contains("başarılı")) {
@@ -176,7 +168,7 @@ fun LoginScreen(
                         }
                         Text(
                             text = mesaj?.replace(" (başarılı)", "") ?: "",
-                            color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF16A34A) else Color(0xFFEF4444),
+                            color = if (mesaj.orEmpty().contains("başarılı")) Color(0xFF10B981) else Color(0xFFEF4444),
                             fontWeight = FontWeight.Bold, fontSize = 13.sp, textAlign = TextAlign.Center
                         )
                     }
@@ -185,7 +177,6 @@ fun LoginScreen(
 
             if (!mesaj.isNullOrEmpty()) Spacer(modifier = Modifier.height(16.dp))
 
-            // Giriş Yap Butonu (Form hatalıysa buton pasif olur - Gelişmiş UX)
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -194,22 +185,21 @@ fun LoginScreen(
                 enabled = isFormValid,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB),
-                    disabledContainerColor = Color(0xFF94A3B8) // Pasif rengi
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Sisteme Giriş Yap", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Sisteme Giriş Yap", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.background)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Kayıt Ol Yönlendirmesi
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("İşletmeniz kayıtlı değil mi? ", color = Color(0xFF64748B), fontSize = 14.sp)
+                Text("İşletmeniz kayıtlı değil mi? ", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 14.sp)
                 Text(
                     text = "Hemen Kurumsal Kayıt Olun",
-                    color = Color(0xFF1E293B),
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 14.sp,
                     modifier = Modifier.clickable { onNavigateToRegister() }
@@ -220,14 +210,13 @@ fun LoginScreen(
         }
     }
 
-    // --- ŞİFRE SIFIRLAMA (FORGOT PASSWORD) DİALOGU ---
     if (showForgotPasswordDialog) {
         AlertDialog(
             onDismissRequest = { showForgotPasswordDialog = false },
-            title = { Text("Şifrenizi mi Unuttunuz?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B)) },
+            title = { Text("Şifrenizi mi Unuttunuz?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column {
-                    Text("Kayıtlı e-posta adresinizi girin. Size güvenli bir şifre sıfırlama bağlantısı göndereceğiz.", fontSize = 13.sp, color = Color(0xFF64748B))
+                    Text("Kayıtlı e-posta adresinizi girin. Size güvenli bir şifre sıfırlama bağlantısı göndereceğiz.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = resetEmail,
@@ -241,20 +230,20 @@ fun LoginScreen(
                 }
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.sifreSifirla(resetEmail)
                         showForgotPasswordDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp)
-                ) { Text("Bağlantı Gönder", fontWeight = FontWeight.Bold) }
+                ) { Text("Bağlantı Gönder", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.background) }
             },
             dismissButton = {
                 TextButton(onClick = { showForgotPasswordDialog = false }) {
-                    Text("İptal", color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+                    Text("İptal", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.Bold)
                 }
             }
         )
